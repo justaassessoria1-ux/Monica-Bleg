@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Monica Bleg — Gestão de Demandas</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
   :root {
     --black: #111111;
@@ -418,10 +418,9 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const SUPABASE_URL = 'COLE_A_URL_DO_SUPABASE_AQUI';
-const SUPABASE_KEY = 'COLE_A_CHAVE_PUBLICA_AQUI';
-const { createClient } = supabase;
-const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_URL = 'https://xmlbnigahwmhknoqpcsw.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_SyKFnORtXNobLC-VQZqVTQ_l2L1Te1f';
+// db initialized after load
 
 // FLUXO PADRÃO
 const ETAPAS = [
@@ -433,6 +432,7 @@ const ETAPAS = [
   { nome: 'Acompanhamento', resp: 'Clara', label: 'Acompan.' },
 ];
 
+let db;
 let demandas = [];
 let colaboradores = [];
 let filtroAtivo = 'todos';
@@ -798,6 +798,12 @@ async function removeColaborador(id) {
   toast('Membro removido.');
 }
 
+window.addEventListener('load', function() {
+  const { createClient } = supabase;
+  db = createClient(SUPABASE_URL, SUPABASE_KEY);
+  init();
+});
+
 async function init() {
   const [{ data: d }, { data: c }] = await Promise.all([
     db.from('demandas').select('*').order('created_at', { ascending: false }),
@@ -809,7 +815,6 @@ async function init() {
   renderEquipeSelect();
 }
 
-init();
 </script>
 </body>
 </html>
