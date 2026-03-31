@@ -268,6 +268,9 @@
         <button class="filter-chip" data-filter="ativo" onclick="setFilter(this)">Ativos</button>
         <button class="filter-chip" data-filter="Concluído" onclick="setFilter(this)">Concluídos</button>
         <button class="filter-chip" data-filter="Cancelado" onclick="setFilter(this)">Cancelados</button>
+        <button class="filter-chip" data-filter="resp-Clara" onclick="setFilter(this)" style="border-color:#D4B896;color:#D4B896;">Clara</button>
+        <button class="filter-chip" data-filter="resp-Monica" onclick="setFilter(this)" style="border-color:#C9A84C;color:#C9A84C;">Monica</button>
+        <button class="filter-chip" data-filter="resp-Munize" onclick="setFilter(this)" style="border-color:#CCCCCC;color:#CCCCCC;">Munize</button>
         <input class="search-input" type="text" placeholder="Buscar cliente..." id="search-input" oninput="renderLista()" />
       </div>
       <div class="table-wrap">
@@ -469,6 +472,15 @@ const SUPABASE_KEY = 'sb_publishable_SyKFnORtXNobLC-VQZqVTQ_l2L1Te1f';
 // db initialized after load
 
 // FLUXO PADRÃO
+
+const CORES_COLAB = {
+  'Clara':  { bg: 'rgba(212,184,150,0.15)', border: '#D4B896', text: '#D4B896', avatar_bg: 'rgba(212,184,150,0.2)' },
+  'Monica': { bg: 'rgba(201,168,76,0.15)',  border: '#C9A84C', text: '#C9A84C', avatar_bg: 'rgba(201,168,76,0.2)' },
+  'Munize': { bg: 'rgba(255,255,255,0.07)', border: '#CCCCCC', text: '#FFFFFF', avatar_bg: 'rgba(255,255,255,0.15)' },
+};
+function corColab(nome) {
+  return CORES_COLAB[nome] || { bg: 'rgba(201,168,76,0.08)', border: 'rgba(201,168,76,0.3)', text: 'var(--gold)', avatar_bg: 'rgba(201,168,76,0.15)' };
+}
 const ETAPAS = [
   { nome: 'Recepção',           resp: 'Clara',  label: 'Recepção' },
   { nome: 'Consulta',           resp: 'Monica', label: 'Consulta' },
@@ -568,22 +580,22 @@ function renderKanban() {
 
   board.innerHTML = cols.map(col => `
     <div class="kanban-col">
-      <div class="kanban-header" style="background:${col.tipo==='concluido'?'rgba(80,200,120,0.06)':col.tipo==='avulso'?'rgba(201,168,76,0.06)':'rgba(201,168,76,0.04)'};">
+      <div class="kanban-header" style="background:${col.tipo==='concluido'?'rgba(80,200,120,0.06)':col.tipo==='avulso'?'rgba(201,168,76,0.06)':corColab(col.resp).bg};border-bottom:2px solid ${col.tipo==='concluido'?'rgba(80,200,120,0.3)':col.tipo==='avulso'?'rgba(201,168,76,0.3)':corColab(col.resp).border};">
         <div class="kanban-header-top">
           <span class="kanban-col-title">${col.titulo}</span>
           <span class="kanban-count">${col.cards.length}</span>
         </div>
-        <div class="kanban-col-resp">${col.resp}</div>
+        <div class="kanban-col-resp" style="color:${corColab(col.resp).text};font-weight:500;">${col.resp}</div>
       </div>
       <div class="kanban-body">
         ${col.cards.length === 0 ? '<div class="kanban-empty">Nenhuma</div>' : ''}
         ${col.cards.map(d => `
-          <div class="kanban-card" onclick="openDetalhe(${d.id})">
-            <div class="kanban-card-name">${d.nome}</div>
+          <div class="kanban-card" onclick="openDetalhe(${d.id})" style="border-left:3px solid ${corColab(col.resp).border};background:${corColab(col.resp).bg};">
+            <div class="kanban-card-name" style="color:${corColab(col.resp).text};">${d.nome}</div>
             <div class="kanban-card-tipo">${d.tipo||'—'}</div>
             <div class="kanban-card-bottom">
               <span class="kanban-card-date">${d.data||'—'}</span>
-              ${d.tipo_fluxo==='avulso'?`<span class="kanban-card-avulso">${d.resp||'—'}</span>`:''}
+              ${d.tipo_fluxo==='avulso'?`<span class="kanban-card-avulso" style="border-color:${corColab(d.resp||'').border};color:${corColab(d.resp||'').text};">${d.resp||'—'}</span>`:''}
             </div>
           </div>`).join('')}
       </div>
@@ -595,17 +607,18 @@ function renderLista() {
   const search = (document.getElementById('search-input')?.value||'').toLowerCase();
   let lista = [...demandas];
   if (filtroAtivo === 'ativo') lista = lista.filter(d => statusDemanda(d) !== 'Concluído' && statusDemanda(d) !== 'Cancelado');
+  else if (filtroAtivo.startsWith('resp-')) { const r = filtroAtivo.replace('resp-',''); lista = lista.filter(d => respAtual(d) === r); }
   else if (filtroAtivo !== 'todos') lista = lista.filter(d => statusDemanda(d) === filtroAtivo);
   if (search) lista = lista.filter(d => (d.nome||'').toLowerCase().includes(search));
   const tbody = document.getElementById('tabela-demandas');
   if (!lista.length) { tbody.innerHTML=`<tr><td colspan="5"><div class="empty-state">Nenhuma demanda encontrada.</div></td></tr>`; return; }
   tbody.innerHTML = lista.map(d => `
     <tr onclick="openDetalhe(${d.id})">
-      <td><div class="td-avatar"><div class="avatar">${iniciais(d.nome)}</div>
+      <td><div class="td-avatar"><div class="avatar" style="background:${corColab(respAtual(d)).avatar_bg};color:${corColab(respAtual(d)).text};border-color:${corColab(respAtual(d)).border};">${iniciais(d.nome)}</div>
         <div><div class="td-nome">${d.nome}</div><div class="td-sub">${d.tel||'—'}</div></div></div></td>
       <td style="color:var(--gold-light);font-size:12px;">${d.tipo||'—'}</td>
       <td><span class="etapa-badge">${etapaLabel(d)}</span></td>
-      <td>${respAtual(d)}</td>
+      <td><span style="color:${corColab(respAtual(d)).text};font-weight:500;">${respAtual(d)}</span></td>
       <td style="color:var(--gray-text);font-size:12px;">${d.data||'—'}</td>
     </tr>`).join('');
 }
