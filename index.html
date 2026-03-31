@@ -166,6 +166,15 @@
   .tipo-btn { flex: 1; padding: 8px; font-size: 12px; font-family: 'DM Sans', sans-serif; border: 1px solid var(--gray-light); border-radius: 6px; background: transparent; color: var(--gray-text); cursor: pointer; transition: all 0.15s; text-align: center; }
   .tipo-btn.active { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.08); }
 
+
+  .obs-etapa-wrap { margin-top: 12px; }
+  .obs-etapa-item { margin-bottom: 10px; }
+  .obs-etapa-label { font-size: 10px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--gold); margin-bottom: 4px; }
+  .obs-etapa-sub { font-size: 10px; color: var(--gray-text); margin-bottom: 4px; }
+  .obs-etapa-textarea { width: 100%; padding: 8px 10px; font-size: 12px; font-family: 'DM Sans', sans-serif; border: 1px solid var(--gray-light); border-radius: 6px; color: var(--white); background: var(--black-card); outline: none; resize: vertical; min-height: 52px; transition: border-color 0.15s; }
+  .obs-etapa-textarea:focus { border-color: var(--gold); }
+  .obs-etapa-btn { margin-top: 4px; padding: 4px 12px; font-size: 11px; font-family: 'DM Sans', sans-serif; border: 1px solid var(--gold); border-radius: 4px; background: transparent; color: var(--gold); cursor: pointer; transition: all 0.15s; }
+  .obs-etapa-btn:hover { background: rgba(201,168,76,0.1); }
   .toast { position: fixed; bottom: 24px; right: 24px; background: var(--gold); color: var(--black); padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
   .toast.show { opacity: 1; }
 
@@ -215,6 +224,14 @@
         <path d="M5 13c0-2.5 1.3-4 3-4s3 1.5 3 4"/>
       </svg>
       Advogados
+    </div>
+    <div class="nav-item" id="nav-relatorio" onclick="showView('relatorio')">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="1" y="1" width="14" height="14" rx="2"/>
+        <line x1="4" y1="11" x2="4" y2="8"/><line x1="7" y1="11" x2="7" y2="5"/>
+        <line x1="10" y1="11" x2="10" y2="7"/><line x1="13" y1="11" x2="13" y2="4"/>
+      </svg>
+      Relatório mensal
     </div>
   </nav>
   <div class="sidebar-footer">Monica Bleg © 2026</div>
@@ -281,6 +298,30 @@
           <thead><tr><th>Membro</th><th>Demandas ativas</th><th>Concluídas</th><th>Total</th></tr></thead>
           <tbody id="tabela-equipe"></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- RELATÓRIO -->
+    <div id="view-relatorio" style="display:none">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+        <select id="rel-mes" onchange="renderRelatorio()" style="padding:7px 12px;font-size:13px;font-family:'DM Sans',sans-serif;border:1px solid var(--gray-light);border-radius:6px;background:var(--black-card);color:var(--white);outline:none;">
+        </select>
+        <span style="font-size:13px;color:var(--gray-text);">Selecione o mês para visualizar</span>
+      </div>
+      <div class="metrics-grid" id="rel-metrics" style="margin-bottom:24px;"></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Membro</th><th>Demandas no mês</th><th>Concluídas</th><th>Em andamento</th><th>Avulsas</th></tr></thead>
+          <tbody id="tabela-relatorio"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:24px;">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Cliente</th><th>Tipo</th><th>Responsável</th><th>Etapa</th><th>Data</th></tr></thead>
+            <tbody id="tabela-relatorio-detalhes"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -363,6 +404,11 @@
         <div class="metric-label" style="margin-bottom:5px;">Observações</div>
         <p id="d-obs" style="font-size:13px;color:var(--white);line-height:1.6;opacity:0.8;"></p>
       </div>
+
+      <div class="detail-section" id="d-obs-etapas-section">
+        <div class="metric-label" style="margin-bottom:8px;">Observações por etapa</div>
+        <div class="obs-etapa-wrap" id="obs-etapa-wrap"></div>
+      </div>
       <div id="d-acoes-fluxo" style="display:none">
         <div class="field">
           <label>Ação</label>
@@ -424,12 +470,13 @@ const SUPABASE_KEY = 'sb_publishable_SyKFnORtXNobLC-VQZqVTQ_l2L1Te1f';
 
 // FLUXO PADRÃO
 const ETAPAS = [
-  { nome: 'Recepção',   resp: 'Clara',  label: 'Recepção' },
-  { nome: 'Consulta',   resp: 'Monica', label: 'Consulta' },
-  { nome: 'Petição',    resp: 'Munize', label: 'Petição' },
-  { nome: 'Revisão',    resp: 'Monica', label: 'Revisão' },
-  { nome: 'Protocolo',  resp: 'Munize', label: 'Protocolo' },
-  { nome: 'Acompanhamento', resp: 'Clara', label: 'Acompan.' },
+  { nome: 'Recepção',           resp: 'Clara',  label: 'Recepção' },
+  { nome: 'Consulta',           resp: 'Monica', label: 'Consulta' },
+  { nome: 'Petição',            resp: 'Munize', label: 'Petição' },
+  { nome: 'Revisão',            resp: 'Monica', label: 'Revisão' },
+  { nome: 'Canva + Organização',resp: 'Clara',  label: 'Canva' },
+  { nome: 'Protocolo',          resp: 'Munize', label: 'Protocolo' },
+  { nome: 'Acompanhamento',     resp: 'Clara',  label: 'Acompan.' },
 ];
 
 let db;
@@ -631,14 +678,15 @@ function setTipo(tipo) {
 }
 
 function showView(view) {
-  ['kanban','demandas','clientes','equipe'].forEach(v=>document.getElementById('view-'+v).style.display=v===view?'block':'none');
-  ['kanban','demandas','clientes','equipe'].forEach(v=>document.getElementById('nav-'+v).classList.remove('active'));
+  ['kanban','demandas','clientes','equipe','relatorio'].forEach(v=>document.getElementById('view-'+v).style.display=v===view?'block':'none');
+  ['kanban','demandas','clientes','equipe','relatorio'].forEach(v=>document.getElementById('nav-'+v).classList.remove('active'));
   document.getElementById('nav-'+view).classList.add('active');
-  const titles = { kanban:'Fluxo de trabalho', demandas:'Todas as demandas', clientes:'Clientes', equipe:'Advogados' };
+  const titles = { kanban:'Fluxo de trabalho', demandas:'Todas as demandas', clientes:'Clientes', equipe:'Advogados', relatorio:'Relatório mensal' };
   document.getElementById('view-title').textContent = titles[view];
   if (view==='demandas') renderLista();
   if (view==='clientes') renderClientes();
   if (view==='equipe') { renderEquipeTabela(); renderEquipeListaConfig(); }
+  if (view==='relatorio') { initRelatorio(); renderRelatorio(); }
 }
 
 function openModal(id) {
@@ -722,7 +770,39 @@ function openDetalhe(id) {
     document.getElementById('d-status').value = d.status;
   }
 
+  // Obs por etapa
+  const obsWrap = document.getElementById('obs-etapa-wrap');
+  const obsEtapasSection = document.getElementById('d-obs-etapas-section');
+  if (d.tipo_fluxo === 'fluxo') {
+    obsEtapasSection.style.display = 'block';
+    const obsEtapas = d.obs_etapas ? JSON.parse(d.obs_etapas) : {};
+    obsWrap.innerHTML = ETAPAS.map((e, idx) => {
+      const done = idx < d.etapa_atual;
+      const current = idx === d.etapa_atual;
+      const val = obsEtapas[idx] || '';
+      return `<div class="obs-etapa-item">
+        <div class="obs-etapa-label">${idx+1}. ${e.nome}</div>
+        <div class="obs-etapa-sub">${e.resp} ${done?'✓ concluída':current?'← etapa atual':''}</div>
+        <textarea class="obs-etapa-textarea" id="obs-etapa-${idx}" placeholder="Observações sobre esta etapa...">${val}</textarea>
+        <button class="obs-etapa-btn" onclick="salvarObsEtapa(${idx})">Salvar</button>
+      </div>`;
+    }).join('');
+  } else {
+    obsEtapasSection.style.display = 'none';
+  }
+
   document.getElementById('modal-detalhe').classList.add('open');
+}
+
+async function salvarObsEtapa(idx) {
+  const d = demandas.find(x=>x.id===detalheId);
+  if (!d) return;
+  const obsEtapas = d.obs_etapas ? JSON.parse(d.obs_etapas) : {};
+  obsEtapas[idx] = document.getElementById('obs-etapa-'+idx).value.trim();
+  const { error } = await db.from('demandas').update({ obs_etapas: JSON.stringify(obsEtapas) }).eq('id', detalheId);
+  if (error) { alert('Erro: '+error.message); return; }
+  d.obs_etapas = JSON.stringify(obsEtapas);
+  toast('Observação salva!');
 }
 
 async function avancarEtapa() {
@@ -796,6 +876,84 @@ async function removeColaborador(id) {
   renderEquipeListaConfig();
   renderEquipeSelect();
   toast('Membro removido.');
+}
+
+function initRelatorio() {
+  const sel = document.getElementById('rel-mes');
+  const meses = {};
+  demandas.forEach(d => {
+    if (!d.data) return;
+    const parts = d.data.split('/');
+    if (parts.length < 3) return;
+    const key = parts[2] + '-' + parts[1];
+    const label = new Date(parts[2], parts[1]-1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    meses[key] = label;
+  });
+  const sorted = Object.entries(meses).sort((a,b) => b[0].localeCompare(a[0]));
+  const current = sel.value;
+  sel.innerHTML = sorted.map(([k,v]) => `<option value="${k}" ${k===current?'selected':''}>${v.charAt(0).toUpperCase()+v.slice(1)}</option>`).join('');
+  if (!sel.value && sorted.length) sel.value = sorted[0][0];
+}
+
+function renderRelatorio() {
+  const sel = document.getElementById('rel-mes');
+  const mesSel = sel.value;
+  if (!mesSel) return;
+  const [ano, mes] = mesSel.split('-');
+  const doMes = demandas.filter(d => {
+    if (!d.data) return false;
+    const parts = d.data.split('/');
+    return parts[2] === ano && parts[1] === mes;
+  });
+
+  // Métricas do mês
+  const relMetrics = document.getElementById('rel-metrics');
+  relMetrics.innerHTML = `
+    <div class="metric-card"><div class="metric-label">Total no mês</div><div class="metric-value">${doMes.length}</div></div>
+    <div class="metric-card"><div class="metric-label">Fluxo padrão</div><div class="metric-value">${doMes.filter(d=>d.tipo_fluxo==='fluxo').length}</div></div>
+    <div class="metric-card"><div class="metric-label">Avulsas</div><div class="metric-value">${doMes.filter(d=>d.tipo_fluxo==='avulso').length}</div></div>
+    <div class="metric-card"><div class="metric-label">Concluídas</div><div class="metric-value">${doMes.filter(d=>d.status==='Concluído'||(d.tipo_fluxo==='fluxo'&&d.etapa_atual>=ETAPAS.length)).length}</div></div>
+  `;
+
+  // Tabela por membro
+  const membros = ['Clara','Monica','Munize', ...colaboradores.map(c=>c.nome)];
+  const uniq = [...new Set(membros)];
+  const tbody = document.getElementById('tabela-relatorio');
+  if (!doMes.length) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">Nenhuma demanda neste mês.</div></td></tr>`;
+    document.getElementById('tabela-relatorio-detalhes').innerHTML = '';
+    return;
+  }
+
+  tbody.innerHTML = uniq.map(nome => {
+    const mine = doMes.filter(d => {
+      if (d.tipo_fluxo === 'avulso') return d.resp === nome;
+      return ETAPAS.some((e, idx) => e.resp === nome && d.etapa_atual === idx) || respAtual(d) === nome;
+    });
+    const todas = doMes.filter(d => respAtual(d) === nome || d.resp === nome);
+    if (!todas.length) return '';
+    const conc = todas.filter(d => d.status==='Concluído' || (d.tipo_fluxo==='fluxo'&&d.etapa_atual>=ETAPAS.length));
+    const ativ = todas.filter(d => d.status!=='Concluído' && d.status!=='Cancelado' && d.etapa_atual<ETAPAS.length);
+    const avul = todas.filter(d => d.tipo_fluxo==='avulso');
+    return `<tr>
+      <td><div class="td-avatar"><div class="avatar">${iniciais(nome)}</div><div class="td-nome">${nome}</div></div></td>
+      <td><strong style="color:var(--gold);font-size:16px;">${todas.length}</strong></td>
+      <td>${conc.length}</td>
+      <td>${ativ.length}</td>
+      <td>${avul.length}</td>
+    </tr>`;
+  }).filter(Boolean).join('') || `<tr><td colspan="5"><div class="empty-state">Nenhum dado para este mês.</div></td></tr>`;
+
+  // Detalhes das demandas do mês
+  const tbody2 = document.getElementById('tabela-relatorio-detalhes');
+  tbody2.innerHTML = doMes.map(d => `
+    <tr onclick="openDetalhe(${d.id})" style="cursor:pointer;">
+      <td><div class="td-avatar"><div class="avatar">${iniciais(d.nome)}</div><div class="td-nome">${d.nome}</div></div></td>
+      <td style="font-size:12px;color:var(--gold-light);">${d.tipo||'—'}</td>
+      <td>${respAtual(d)}</td>
+      <td><span class="etapa-badge">${etapaLabel(d)}</span></td>
+      <td style="font-size:12px;color:var(--gray-text);">${d.data||'—'}</td>
+    </tr>`).join('');
 }
 
 window.addEventListener('load', function() {
