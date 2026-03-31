@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Monica Bleg — Gestão de Demandas</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --black: #111111;
+    --black-mid: #1A1A1A;
+    --black-light: #252525;
+    --black-card: #1E1E1E;
+    --gold: #C9A84C;
+    --gold-light: #E2C470;
+    --gold-pale: #F5E8C0;
+    --white: #FFFFFF;
+    --gray-light: #2E2E2E;
+    --gray-mid: #444444;
+    --gray-text: #888880;
+    --border: rgba(201,168,76,0.15);
+    --status-open-bg: #1A1A2E; --status-open-fg: #7B9FD4;
+    --status-progress-bg: #2A2000; --status-progress-fg: #D4A840;
+    --status-waiting-bg: #2A1020; --status-waiting-fg: #D47090;
+    --status-done-bg: #0A2A14; --status-done-fg: #50C878;
+    --status-cancel-bg: #222220; --status-cancel-fg: #888880;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--black); color: var(--white); min-height: 100vh; }
+
+  .sidebar {
+    position: fixed; top: 0; left: 0;
+    width: 230px; height: 100vh;
+    background: var(--black-mid);
+    display: flex; flex-direction: column;
+    z-index: 100; border-right: 1px solid var(--border);
+  }
+  .sidebar-logo { padding: 24px 24px 20px; border-bottom: 1px solid var(--border); text-align: center; }
+  .logo-monogram { font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 700; color: var(--gold); letter-spacing: 4px; line-height: 1; }
+  .logo-name { font-family: 'Playfair Display', serif; font-size: 13px; font-weight: 600; color: var(--white); letter-spacing: 2px; text-transform: uppercase; margin-top: 6px; }
+  .logo-sub { font-size: 9px; font-weight: 300; letter-spacing: 1.5px; color: var(--gold); text-transform: uppercase; margin-top: 3px; opacity: 0.7; }
+  .logo-oab { font-size: 10px; color: var(--gray-text); margin-top: 4px; letter-spacing: 1px; }
+  .sidebar-nav { flex: 1; padding: 20px 0; overflow-y: auto; }
+  .nav-section { font-size: 9px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; color: var(--gray-text); padding: 0 24px; margin-bottom: 6px; margin-top: 18px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 24px; font-size: 13px; font-weight: 400; color: var(--gray-text); cursor: pointer; transition: all 0.15s; border-left: 2px solid transparent; }
+  .nav-item:hover { color: var(--white); background: rgba(201,168,76,0.05); }
+  .nav-item.active { color: var(--gold-light); border-left-color: var(--gold); background: rgba(201,168,76,0.08); }
+  .nav-icon { width: 15px; height: 15px; opacity: 0.6; flex-shrink: 0; }
+  .nav-item.active .nav-icon { opacity: 1; }
+  .sidebar-footer { padding: 14px 24px; border-top: 1px solid var(--border); font-size: 10px; color: var(--gray-text); text-align: center; letter-spacing: 1px; }
+
+  .main { margin-left: 230px; min-height: 100vh; display: flex; flex-direction: column; }
+  .topbar { background: var(--black-mid); border-bottom: 1px solid var(--border); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+  .topbar-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 600; color: var(--white); }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .topbar-date { font-size: 11px; color: var(--gray-text); }
+  .btn-nova { background: var(--gold); color: var(--black); border: none; cursor: pointer; padding: 8px 16px; font-size: 13px; font-weight: 500; font-family: 'DM Sans', sans-serif; border-radius: 6px; transition: all 0.15s; }
+  .btn-nova:hover { background: var(--gold-light); }
+
+  .content { padding: 24px 28px; flex: 1; }
+
+  .metrics-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .metric-card { background: var(--black-card); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; position: relative; overflow: hidden; }
+  .metric-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, var(--gold) 0%, transparent 100%); }
+  .metric-label { font-size: 10px; font-weight: 400; color: var(--gray-text); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+  .metric-value { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 700; color: var(--gold); line-height: 1; }
+
+  /* FLUXO KANBAN */
+  .kanban-wrap { overflow-x: auto; padding-bottom: 8px; }
+  .kanban { display: flex; gap: 12px; min-width: max-content; }
+  .kanban-col { width: 220px; flex-shrink: 0; }
+  .kanban-header { padding: 10px 14px; border-radius: 8px 8px 0 0; border: 1px solid var(--border); border-bottom: none; }
+  .kanban-header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+  .kanban-col-title { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: var(--gold); }
+  .kanban-col-resp { font-size: 10px; color: var(--gray-text); }
+  .kanban-count { font-size: 11px; font-weight: 500; color: var(--gray-text); background: var(--black-light); padding: 2px 7px; border-radius: 99px; }
+  .kanban-body { background: var(--black-card); border: 1px solid var(--border); border-radius: 0 0 8px 8px; min-height: 300px; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+  .kanban-card { background: var(--black-light); border: 1px solid var(--border); border-radius: 8px; padding: 12px; cursor: pointer; transition: border-color 0.15s; }
+  .kanban-card:hover { border-color: var(--gold); }
+  .kanban-card-name { font-size: 13px; font-weight: 500; color: var(--white); margin-bottom: 4px; }
+  .kanban-card-tipo { font-size: 11px; color: var(--gold-light); margin-bottom: 6px; }
+  .kanban-card-bottom { display: flex; align-items: center; justify-content: space-between; }
+  .kanban-card-date { font-size: 10px; color: var(--gray-text); }
+  .kanban-card-avulso { display: inline-block; font-size: 9px; padding: 2px 6px; border-radius: 99px; background: rgba(201,168,76,0.1); color: var(--gold); border: 1px solid rgba(201,168,76,0.2); }
+  .kanban-empty { font-size: 12px; color: var(--gray-text); text-align: center; padding: 20px 0; opacity: 0.5; }
+
+  /* LISTA */
+  .filters-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+  .filter-chip { padding: 5px 12px; font-size: 12px; border: 1px solid var(--gray-light); border-radius: 99px; cursor: pointer; background: transparent; color: var(--gray-text); font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+  .filter-chip:hover { border-color: var(--gold); color: var(--gold); }
+  .filter-chip.active { background: var(--gold); color: var(--black); border-color: var(--gold); font-weight: 500; }
+  .search-input { margin-left: auto; padding: 6px 12px; font-size: 13px; font-family: 'DM Sans', sans-serif; border: 1px solid var(--gray-light); border-radius: 6px; background: var(--black-card); color: var(--white); width: 180px; outline: none; transition: border-color 0.15s; }
+  .search-input:focus { border-color: var(--gold); }
+  .search-input::placeholder { color: var(--gray-text); }
+
+  .table-wrap { background: var(--black-card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: var(--black-light); border-bottom: 1px solid var(--border); }
+  thead th { padding: 11px 14px; font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 1.5px; color: var(--gold); text-align: left; }
+  tbody tr { border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; transition: background 0.12s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(201,168,76,0.04); }
+  tbody td { padding: 12px 14px; font-size: 13px; color: var(--white); vertical-align: middle; }
+  .td-nome { font-weight: 500; }
+  .td-sub { font-size: 11px; color: var(--gray-text); margin-top: 2px; }
+  .td-avatar { display: flex; align-items: center; gap: 10px; }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; background: rgba(201,168,76,0.15); color: var(--gold); flex-shrink: 0; border: 1px solid rgba(201,168,76,0.3); }
+
+  .badge { display: inline-block; padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+  .badge-aberto     { background: var(--status-open-bg);     color: var(--status-open-fg); }
+  .badge-andamento  { background: var(--status-progress-bg); color: var(--status-progress-fg); }
+  .badge-aguardando { background: var(--status-waiting-bg);  color: var(--status-waiting-fg); }
+  .badge-concluido  { background: var(--status-done-bg);     color: var(--status-done-fg); }
+  .badge-cancelado  { background: var(--status-cancel-bg);   color: var(--status-cancel-fg); }
+
+  .etapa-badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 500; background: rgba(201,168,76,0.1); color: var(--gold-light); border: 1px solid rgba(201,168,76,0.2); white-space: nowrap; }
+
+  .empty-state { text-align: center; padding: 40px 24px; color: var(--gray-text); font-size: 14px; }
+  .loading { text-align: center; padding: 40px 24px; color: var(--gray-text); font-size: 13px; }
+
+  /* MODAL */
+  .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); z-index: 200; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal-box { background: var(--black-mid); border: 1px solid var(--border); border-radius: 12px; width: 100%; max-width: 500px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.6); max-height: 90vh; display: flex; flex-direction: column; }
+  .modal-header { background: var(--black-light); border-bottom: 1px solid var(--border); padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .modal-header h2 { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 600; color: var(--white); }
+  .modal-close { background: none; border: none; cursor: pointer; color: var(--gray-text); font-size: 20px; line-height: 1; padding: 2px 6px; }
+  .modal-close:hover { color: var(--white); }
+  .modal-body { padding: 22px; overflow-y: auto; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 10px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--gray-text); margin-bottom: 5px; }
+  .field input, .field select, .field textarea { width: 100%; padding: 9px 11px; font-size: 13px; font-family: 'DM Sans', sans-serif; border: 1px solid var(--gray-light); border-radius: 6px; color: var(--white); background: var(--black-card); outline: none; transition: border-color 0.15s; }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--gold); }
+  .field select option { background: var(--black-mid); }
+  .field textarea { resize: vertical; min-height: 64px; }
+  .fields-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-footer { padding: 14px 22px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; flex-shrink: 0; }
+  .btn-sec { padding: 8px 16px; font-size: 13px; font-family: 'DM Sans', sans-serif; border: 1px solid var(--gray-light); border-radius: 6px; background: transparent; color: var(--gray-text); cursor: pointer; transition: all 0.15s; }
+  .btn-sec:hover { border-color: var(--white); color: var(--white); }
+  .btn-prim { padding: 8px 18px; font-size: 13px; font-family: 'DM Sans', sans-serif; border: none; border-radius: 6px; background: var(--gold); color: var(--black); cursor: pointer; font-weight: 500; transition: all 0.15s; }
+  .btn-prim:hover { background: var(--gold-light); }
+  .btn-prim:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-danger { padding: 8px 16px; font-size: 13px; font-family: 'DM Sans', sans-serif; border: 1px solid rgba(200,80,80,0.4); border-radius: 6px; background: transparent; color: #D06060; cursor: pointer; transition: all 0.15s; }
+  .btn-danger:hover { background: rgba(200,80,80,0.1); }
+
+  /* FLUXO VISUAL NO DETALHE */
+  .fluxo-steps { display: flex; align-items: center; gap: 0; margin: 12px 0; overflow-x: auto; padding-bottom: 4px; }
+  .fluxo-step { display: flex; flex-direction: column; align-items: center; gap: 3px; flex-shrink: 0; }
+  .fluxo-step-circle { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; border: 2px solid var(--gray-light); color: var(--gray-text); background: var(--black-card); }
+  .fluxo-step-circle.done { background: var(--gold); border-color: var(--gold); color: var(--black); }
+  .fluxo-step-circle.current { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.1); }
+  .fluxo-step-label { font-size: 9px; color: var(--gray-text); text-align: center; max-width: 52px; line-height: 1.2; }
+  .fluxo-step-label.current { color: var(--gold); }
+  .fluxo-connector { width: 16px; height: 2px; background: var(--gray-light); flex-shrink: 0; margin-bottom: 14px; }
+  .fluxo-connector.done { background: var(--gold); }
+
+  .detail-section { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+  .detail-section:last-of-type { border-bottom: none; }
+  .detail-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+  .detail-row span:first-child { color: var(--gray-text); }
+  .detail-row span:last-child { font-weight: 500; color: var(--white); }
+
+  /* TIPO TOGGLE */
+  .tipo-toggle { display: flex; gap: 8px; margin-bottom: 14px; }
+  .tipo-btn { flex: 1; padding: 8px; font-size: 12px; font-family: 'DM Sans', sans-serif; border: 1px solid var(--gray-light); border-radius: 6px; background: transparent; color: var(--gray-text); cursor: pointer; transition: all 0.15s; text-align: center; }
+  .tipo-btn.active { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.08); }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--gold); color: var(--black); padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+
+  @media (max-width: 768px) {
+    .sidebar { width: 0; overflow: hidden; }
+    .main { margin-left: 0; }
+    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+    .topbar, .content { padding: 12px 14px; }
+    .fields-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-monogram">MB</div>
+    <div class="logo-name">Monica Bleg</div>
+    <div class="logo-sub">Centro de Advocacia</div>
+    <div class="logo-oab">OAB 72.486</div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Gestão</div>
+    <div class="nav-item active" id="nav-kanban" onclick="showView('kanban')">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="1" y="2" width="4" height="12" rx="1"/><rect x="6" y="2" width="4" height="8" rx="1"/><rect x="11" y="2" width="4" height="10" rx="1"/>
+      </svg>
+      Fluxo de trabalho
+    </div>
+    <div class="nav-item" id="nav-demandas" onclick="showView('demandas')">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="1" y="2" width="14" height="12" rx="2"/><line x1="5" y1="6" x2="11" y2="6"/><line x1="5" y1="9" x2="9" y2="9"/>
+      </svg>
+      Todas as demandas
+    </div>
+    <div class="nav-item" id="nav-clientes" onclick="showView('clientes')">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="8" cy="5" r="3"/><path d="M2 13c0-3 2.7-5 6-5s6 2 6 5"/>
+      </svg>
+      Clientes
+    </div>
+    <div class="nav-section">Equipe</div>
+    <div class="nav-item" id="nav-equipe" onclick="showView('equipe')">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="5" cy="5" r="2.5"/><circle cx="11" cy="5" r="2.5"/>
+        <path d="M0 13c0-2.5 2-4 5-4"/><path d="M16 13c0-2.5-2-4-5-4"/>
+        <path d="M5 13c0-2.5 1.3-4 3-4s3 1.5 3 4"/>
+      </svg>
+      Advogados
+    </div>
+  </nav>
+  <div class="sidebar-footer">Monica Bleg © 2026</div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="view-title">Fluxo de trabalho</div>
+    <div class="topbar-right">
+      <span class="topbar-date" id="topbar-date"></span>
+      <button class="btn-nova" onclick="openModal('modal-nova')">+ Nova demanda</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- KANBAN -->
+    <div id="view-kanban">
+      <div class="metrics-grid">
+        <div class="metric-card"><div class="metric-label">Total ativo</div><div class="metric-value" id="m-total">—</div></div>
+        <div class="metric-card"><div class="metric-label">Com Monica</div><div class="metric-value" id="m-monica">—</div></div>
+        <div class="metric-card"><div class="metric-label">Com Munize</div><div class="metric-value" id="m-munize">—</div></div>
+        <div class="metric-card"><div class="metric-label">Com Clara</div><div class="metric-value" id="m-clara">—</div></div>
+      </div>
+      <div class="kanban-wrap">
+        <div class="kanban" id="kanban-board"></div>
+      </div>
+    </div>
+
+    <!-- TODAS DEMANDAS -->
+    <div id="view-demandas" style="display:none">
+      <div class="filters-bar">
+        <button class="filter-chip active" data-filter="todos" onclick="setFilter(this)">Todos</button>
+        <button class="filter-chip" data-filter="ativo" onclick="setFilter(this)">Ativos</button>
+        <button class="filter-chip" data-filter="Concluído" onclick="setFilter(this)">Concluídos</button>
+        <button class="filter-chip" data-filter="Cancelado" onclick="setFilter(this)">Cancelados</button>
+        <input class="search-input" type="text" placeholder="Buscar cliente..." id="search-input" oninput="renderLista()" />
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Cliente</th><th>Tipo</th><th>Etapa atual</th><th>Responsável</th><th>Data</th></tr></thead>
+          <tbody id="tabela-demandas"><tr><td colspan="5"><div class="loading">Carregando...</div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CLIENTES -->
+    <div id="view-clientes" style="display:none">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Cliente</th><th>Contato</th><th>Demandas</th><th>Última demanda</th></tr></thead>
+          <tbody id="tabela-clientes"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- EQUIPE -->
+    <div id="view-equipe" style="display:none">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+        <button class="btn-nova" onclick="openModal('modal-equipe-cfg')">+ Adicionar membro</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Membro</th><th>Demandas ativas</th><th>Concluídas</th><th>Total</th></tr></thead>
+          <tbody id="tabela-equipe"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- MODAL NOVA DEMANDA -->
+<div class="modal-overlay" id="modal-nova">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>Nova demanda</h2>
+      <button class="modal-close" onclick="closeModal('modal-nova')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="tipo-toggle">
+        <button class="tipo-btn active" id="btn-fluxo" onclick="setTipo('fluxo')">Fluxo padrão (6 etapas)</button>
+        <button class="tipo-btn" id="btn-avulso" onclick="setTipo('avulso')">Demanda avulsa</button>
+      </div>
+      <div class="fields-row">
+        <div class="field"><label>Nome do cliente *</label><input type="text" id="f-nome" placeholder="Nome completo" /></div>
+        <div class="field"><label>Telefone</label><input type="text" id="f-tel" placeholder="(00) 9 0000-0000" /></div>
+      </div>
+      <div class="field">
+        <label>Tipo de demanda *</label>
+        <select id="f-tipo">
+          <option value="">Selecione...</option>
+          <option>Processo Judicial</option>
+          <option>Consulta Jurídica</option>
+          <option>Elaboração de Contrato</option>
+          <option>Inventário</option>
+          <option>Divórcio</option>
+          <option>Direito Trabalhista</option>
+          <option>Direito do Consumidor</option>
+          <option>Direito de Família</option>
+          <option>Outro</option>
+        </select>
+      </div>
+      <div id="campo-resp-avulso" style="display:none">
+        <div class="field">
+          <label>Delegar para *</label>
+          <select id="f-resp-avulso"><option value="">Selecione...</option></select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Número do processo</label>
+        <input type="text" id="f-processo" placeholder="Ex: 0000000-00.0000.0.00.0000" />
+      </div>
+      <div class="field">
+        <label>Observações</label>
+        <textarea id="f-obs" placeholder="Anotações sobre a demanda..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sec" onclick="closeModal('modal-nova')">Cancelar</button>
+      <button class="btn-prim" id="btn-salvar" onclick="salvarDemanda()">Salvar demanda</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALHE -->
+<div class="modal-overlay" id="modal-detalhe">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 id="d-nome-header">Detalhe</h2>
+      <button class="modal-close" onclick="closeModal('modal-detalhe')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-section" id="d-fluxo-section">
+        <div class="metric-label" style="margin-bottom:8px;">Progresso</div>
+        <div class="fluxo-steps" id="d-fluxo-steps"></div>
+      </div>
+      <div class="detail-section">
+        <div class="detail-row"><span>Contato</span><span id="d-tel">—</span></div>
+        <div class="detail-row"><span>Tipo</span><span id="d-tipo">—</span></div>
+        <div class="detail-row"><span>Responsável atual</span><span id="d-resp">—</span></div>
+        <div class="detail-row"><span>Nº do processo</span><span id="d-processo">—</span></div>
+        <div class="detail-row"><span>Data de entrada</span><span id="d-data">—</span></div>
+      </div>
+      <div class="detail-section" id="d-obs-section" style="display:none">
+        <div class="metric-label" style="margin-bottom:5px;">Observações</div>
+        <p id="d-obs" style="font-size:13px;color:var(--white);line-height:1.6;opacity:0.8;"></p>
+      </div>
+      <div id="d-acoes-fluxo" style="display:none">
+        <div class="field">
+          <label>Ação</label>
+          <div style="display:flex;gap:8px;margin-top:4px;">
+            <button class="btn-prim" style="flex:1;" onclick="avancarEtapa()">Avançar etapa →</button>
+            <button class="btn-sec" onclick="voltarEtapa()">← Voltar</button>
+          </div>
+        </div>
+      </div>
+      <div id="d-acoes-avulso" style="display:none">
+        <div class="field">
+          <label>Status</label>
+          <select id="d-status" onchange="atualizarStatusAvulso()">
+            <option>Em aberto</option>
+            <option>Em andamento</option>
+            <option>Aguardando doc.</option>
+            <option>Concluído</option>
+            <option>Cancelado</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-danger" onclick="excluirDemanda()">Excluir</button>
+      <button class="btn-sec" onclick="closeModal('modal-detalhe')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EQUIPE -->
+<div class="modal-overlay" id="modal-equipe-cfg">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>Gerenciar equipe</h2>
+      <button class="modal-close" onclick="closeModal('modal-equipe-cfg')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--gray-text);margin-bottom:14px;">Membros da equipe para demandas avulsas.</p>
+      <div id="equipe-lista" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;"></div>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="novo-colaborador" placeholder="Nome do membro"
+          style="flex:1;padding:8px 11px;font-size:13px;font-family:'DM Sans',sans-serif;border:1px solid var(--gray-light);border-radius:6px;outline:none;color:var(--white);background:var(--black-card);"
+          onkeydown="if(event.key==='Enter')addColaborador()" />
+        <button class="btn-prim" onclick="addColaborador()">Adicionar</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-prim" onclick="closeModal('modal-equipe-cfg')">Concluir</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'COLE_A_URL_DO_SUPABASE_AQUI';
+const SUPABASE_KEY = 'COLE_A_CHAVE_PUBLICA_AQUI';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// FLUXO PADRÃO
+const ETAPAS = [
+  { nome: 'Recepção',   resp: 'Clara',  label: 'Recepção' },
+  { nome: 'Consulta',   resp: 'Monica', label: 'Consulta' },
+  { nome: 'Petição',    resp: 'Munize', label: 'Petição' },
+  { nome: 'Revisão',    resp: 'Monica', label: 'Revisão' },
+  { nome: 'Protocolo',  resp: 'Munize', label: 'Protocolo' },
+  { nome: 'Acompanhamento', resp: 'Clara', label: 'Acompan.' },
+];
+
+let demandas = [];
+let colaboradores = [];
+let filtroAtivo = 'todos';
+let detalheId = null;
+let tipoNova = 'fluxo';
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 2500);
+}
+
+function hoje() {
+  const d = new Date();
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+}
+
+document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+
+function iniciais(nome) {
+  return (nome||'').trim().split(' ').filter(Boolean).slice(0,2).map(n=>n[0]).join('').toUpperCase();
+}
+
+function respAtual(d) {
+  if (d.tipo_fluxo === 'avulso') return d.resp || '—';
+  if (d.etapa_atual >= ETAPAS.length) return 'Concluído';
+  return ETAPAS[d.etapa_atual]?.resp || '—';
+}
+
+function etapaLabel(d) {
+  if (d.tipo_fluxo === 'avulso') return d.status || '—';
+  if (d.etapa_atual >= ETAPAS.length) return 'Concluído';
+  return ETAPAS[d.etapa_atual]?.nome || '—';
+}
+
+function statusDemanda(d) {
+  if (d.tipo_fluxo === 'avulso') return d.status;
+  if (d.etapa_atual >= ETAPAS.length) return 'Concluído';
+  if (d.status === 'Cancelado') return 'Cancelado';
+  return 'Em andamento';
+}
+
+function badge(status) {
+  const map = { 'Em aberto':'badge-aberto','Em andamento':'badge-andamento','Aguardando doc.':'badge-aguardando','Concluído':'badge-concluido','Cancelado':'badge-cancelado' };
+  return `<span class="badge ${map[status]||'badge-andamento'}">${status}</span>`;
+}
+
+// ── MÉTRICAS ──
+function renderMetrics() {
+  const ativos = demandas.filter(d => statusDemanda(d) !== 'Concluído' && statusDemanda(d) !== 'Cancelado');
+  document.getElementById('m-total').textContent = ativos.length;
+  document.getElementById('m-monica').textContent = ativos.filter(d => respAtual(d) === 'Monica').length;
+  document.getElementById('m-munize').textContent = ativos.filter(d => respAtual(d) === 'Munize').length;
+  document.getElementById('m-clara').textContent = ativos.filter(d => respAtual(d) === 'Clara').length;
+}
+
+// ── KANBAN ──
+function renderKanban() {
+  renderMetrics();
+  const board = document.getElementById('kanban-board');
+  const cols = [];
+
+  // Colunas do fluxo padrão
+  ETAPAS.forEach((etapa, idx) => {
+    const cards = demandas.filter(d =>
+      d.tipo_fluxo === 'fluxo' &&
+      d.etapa_atual === idx &&
+      d.status !== 'Cancelado'
+    );
+    cols.push({ titulo: etapa.nome, resp: etapa.resp, cards, tipo: 'etapa' });
+  });
+
+  // Coluna de avulsas ativas
+  const avulsas = demandas.filter(d =>
+    d.tipo_fluxo === 'avulso' &&
+    d.status !== 'Concluído' && d.status !== 'Cancelado'
+  );
+  cols.push({ titulo: 'Demandas avulsas', resp: 'Delegadas', cards: avulsas, tipo: 'avulso' });
+
+  // Coluna concluídas
+  const concluidas = demandas.filter(d =>
+    (d.tipo_fluxo === 'fluxo' && d.etapa_atual >= ETAPAS.length) ||
+    (d.tipo_fluxo === 'avulso' && d.status === 'Concluído')
+  );
+  cols.push({ titulo: 'Concluídas', resp: '', cards: concluidas, tipo: 'concluido' });
+
+  board.innerHTML = cols.map(col => `
+    <div class="kanban-col">
+      <div class="kanban-header" style="background:${col.tipo==='concluido'?'rgba(80,200,120,0.06)':col.tipo==='avulso'?'rgba(201,168,76,0.06)':'rgba(201,168,76,0.04)'};">
+        <div class="kanban-header-top">
+          <span class="kanban-col-title">${col.titulo}</span>
+          <span class="kanban-count">${col.cards.length}</span>
+        </div>
+        <div class="kanban-col-resp">${col.resp}</div>
+      </div>
+      <div class="kanban-body">
+        ${col.cards.length === 0 ? '<div class="kanban-empty">Nenhuma</div>' : ''}
+        ${col.cards.map(d => `
+          <div class="kanban-card" onclick="openDetalhe(${d.id})">
+            <div class="kanban-card-name">${d.nome}</div>
+            <div class="kanban-card-tipo">${d.tipo||'—'}</div>
+            <div class="kanban-card-bottom">
+              <span class="kanban-card-date">${d.data||'—'}</span>
+              ${d.tipo_fluxo==='avulso'?`<span class="kanban-card-avulso">${d.resp||'—'}</span>`:''}
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+// ── LISTA ──
+function renderLista() {
+  const search = (document.getElementById('search-input')?.value||'').toLowerCase();
+  let lista = [...demandas];
+  if (filtroAtivo === 'ativo') lista = lista.filter(d => statusDemanda(d) !== 'Concluído' && statusDemanda(d) !== 'Cancelado');
+  else if (filtroAtivo !== 'todos') lista = lista.filter(d => statusDemanda(d) === filtroAtivo);
+  if (search) lista = lista.filter(d => (d.nome||'').toLowerCase().includes(search));
+  const tbody = document.getElementById('tabela-demandas');
+  if (!lista.length) { tbody.innerHTML=`<tr><td colspan="5"><div class="empty-state">Nenhuma demanda encontrada.</div></td></tr>`; return; }
+  tbody.innerHTML = lista.map(d => `
+    <tr onclick="openDetalhe(${d.id})">
+      <td><div class="td-avatar"><div class="avatar">${iniciais(d.nome)}</div>
+        <div><div class="td-nome">${d.nome}</div><div class="td-sub">${d.tel||'—'}</div></div></div></td>
+      <td style="color:var(--gold-light);font-size:12px;">${d.tipo||'—'}</td>
+      <td><span class="etapa-badge">${etapaLabel(d)}</span></td>
+      <td>${respAtual(d)}</td>
+      <td style="color:var(--gray-text);font-size:12px;">${d.data||'—'}</td>
+    </tr>`).join('');
+}
+
+function renderClientes() {
+  const map = {};
+  demandas.forEach(d=>{ if(!map[d.nome]) map[d.nome]={tel:d.tel,count:0,ultima:d.data}; map[d.nome].count++; map[d.nome].ultima=d.data; });
+  const tbody = document.getElementById('tabela-clientes');
+  const entries = Object.entries(map);
+  if (!entries.length) { tbody.innerHTML=`<tr><td colspan="4"><div class="empty-state">Nenhum cliente cadastrado.</div></td></tr>`; return; }
+  tbody.innerHTML = entries.map(([nome,info])=>`
+    <tr><td><div class="td-avatar"><div class="avatar">${iniciais(nome)}</div><div class="td-nome">${nome}</div></div></td>
+    <td style="font-size:13px;color:var(--gray-text);">${info.tel||'—'}</td>
+    <td><span class="badge badge-andamento">${info.count}</span></td>
+    <td style="font-size:12px;color:var(--gray-text);">${info.ultima||'—'}</td></tr>`).join('');
+}
+
+function renderEquipeTabela() {
+  const todos = ['Clara','Monica','Munize', ...colaboradores.map(c=>c.nome)];
+  const uniq = [...new Set(todos)];
+  const tbody = document.getElementById('tabela-equipe');
+  tbody.innerHTML = uniq.map(nome => {
+    const ativos = demandas.filter(d => respAtual(d)===nome && statusDemanda(d)!=='Concluído' && statusDemanda(d)!=='Cancelado');
+    const conc = demandas.filter(d => {
+      if (d.tipo_fluxo==='fluxo') return d.etapa_atual >= ETAPAS.length;
+      return d.status==='Concluído';
+    });
+    return `<tr><td><div class="td-avatar"><div class="avatar">${iniciais(nome)}</div><div class="td-nome">${nome}</div></div></td>
+    <td>${ativos.length}</td>
+    <td>${conc.length}</td>
+    <td><strong>${demandas.filter(d=>respAtual(d)===nome||d.resp===nome).length}</strong></td></tr>`;
+  }).join('');
+}
+
+function renderEquipeSelect() {
+  const todos = ['Clara','Monica','Munize', ...colaboradores.map(c=>c.nome)];
+  const uniq = [...new Set(todos)];
+  const sel = document.getElementById('f-resp-avulso');
+  sel.innerHTML = '<option value="">Selecione...</option>' + uniq.map(n=>`<option>${n}</option>`).join('');
+}
+
+function renderEquipeListaConfig() {
+  const lista = document.getElementById('equipe-lista');
+  const fixos = ['Clara','Monica','Munize'];
+  const extras = colaboradores.filter(c=>!fixos.includes(c.nome));
+  const fixosHtml = fixos.map(n=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(201,168,76,0.06);border-radius:6px;border:1px solid var(--border);">
+      <span style="font-size:13px;color:var(--gold);">${n} <span style="font-size:10px;color:var(--gray-text);">— membro fixo</span></span>
+    </div>`).join('');
+  const extrasHtml = extras.map(c=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--black-card);border-radius:6px;border:1px solid var(--border);">
+      <span style="font-size:13px;color:var(--white);">${c.nome}</span>
+      <button onclick="removeColaborador(${c.id})" style="background:none;border:none;cursor:pointer;color:var(--gray-text);font-size:16px;padding:0 4px;">×</button>
+    </div>`).join('');
+  lista.innerHTML = fixosHtml + extrasHtml;
+}
+
+function setFilter(el) {
+  filtroAtivo = el.dataset.filter;
+  document.querySelectorAll('.filter-chip').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  renderLista();
+}
+
+function setTipo(tipo) {
+  tipoNova = tipo;
+  document.getElementById('btn-fluxo').classList.toggle('active', tipo==='fluxo');
+  document.getElementById('btn-avulso').classList.toggle('active', tipo==='avulso');
+  document.getElementById('campo-resp-avulso').style.display = tipo==='avulso' ? 'block' : 'none';
+}
+
+function showView(view) {
+  ['kanban','demandas','clientes','equipe'].forEach(v=>document.getElementById('view-'+v).style.display=v===view?'block':'none');
+  ['kanban','demandas','clientes','equipe'].forEach(v=>document.getElementById('nav-'+v).classList.remove('active'));
+  document.getElementById('nav-'+view).classList.add('active');
+  const titles = { kanban:'Fluxo de trabalho', demandas:'Todas as demandas', clientes:'Clientes', equipe:'Advogados' };
+  document.getElementById('view-title').textContent = titles[view];
+  if (view==='demandas') renderLista();
+  if (view==='clientes') renderClientes();
+  if (view==='equipe') { renderEquipeTabela(); renderEquipeListaConfig(); }
+}
+
+function openModal(id) {
+  if (id==='modal-nova') { setTipo('fluxo'); renderEquipeSelect(); }
+  document.getElementById(id).classList.add('open');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  if (id==='modal-nova') {
+    ['f-nome','f-tel','f-obs','f-processo'].forEach(x=>document.getElementById(x).value='');
+    document.getElementById('f-tipo').value='';
+    document.getElementById('f-resp-avulso').value='';
+  }
+}
+
+async function salvarDemanda() {
+  const nome = document.getElementById('f-nome').value.trim();
+  const tipo = document.getElementById('f-tipo').value;
+  if (!nome||!tipo) { alert('Preencha nome e tipo de demanda.'); return; }
+  if (tipoNova==='avulso' && !document.getElementById('f-resp-avulso').value) { alert('Selecione o responsável.'); return; }
+  const btn = document.getElementById('btn-salvar');
+  btn.disabled=true; btn.textContent='Salvando...';
+  const payload = {
+    nome, tipo,
+    tel: document.getElementById('f-tel').value.trim()||null,
+    obs: document.getElementById('f-obs').value.trim()||null,
+    processo: document.getElementById('f-processo').value.trim()||null,
+    tipo_fluxo: tipoNova,
+    etapa_atual: 0,
+    status: tipoNova==='avulso' ? 'Em aberto' : 'Em andamento',
+    resp: tipoNova==='avulso' ? document.getElementById('f-resp-avulso').value : null,
+    data: hoje()
+  };
+  const { data, error } = await db.from('demandas').insert([payload]).select();
+  btn.disabled=false; btn.textContent='Salvar demanda';
+  if (error) { alert('Erro: '+error.message); return; }
+  demandas.unshift(data[0]);
+  closeModal('modal-nova');
+  renderKanban();
+  toast('Demanda cadastrada!');
+}
+
+function openDetalhe(id) {
+  detalheId = id;
+  const d = demandas.find(x=>x.id===id);
+  document.getElementById('d-nome-header').textContent = d.nome;
+  document.getElementById('d-tel').textContent = d.tel||'—';
+  document.getElementById('d-tipo').textContent = d.tipo||'—';
+  document.getElementById('d-resp').textContent = respAtual(d);
+  document.getElementById('d-processo').textContent = d.processo||'—';
+  document.getElementById('d-data').textContent = d.data||'—';
+  const obsEl = document.getElementById('d-obs');
+  const obsSection = document.getElementById('d-obs-section');
+  if (d.obs) { obsEl.textContent=d.obs; obsSection.style.display='block'; } else { obsSection.style.display='none'; }
+
+  // Fluxo visual
+  const fluxoSection = document.getElementById('d-fluxo-section');
+  const stepsEl = document.getElementById('d-fluxo-steps');
+  const acoesFluxo = document.getElementById('d-acoes-fluxo');
+  const acoesAvulso = document.getElementById('d-acoes-avulso');
+
+  if (d.tipo_fluxo === 'fluxo') {
+    fluxoSection.style.display = 'block';
+    acoesFluxo.style.display = 'block';
+    acoesAvulso.style.display = 'none';
+    stepsEl.innerHTML = ETAPAS.map((e, idx) => {
+      const done = idx < d.etapa_atual;
+      const current = idx === d.etapa_atual;
+      return `
+        ${idx > 0 ? `<div class="fluxo-connector ${done||current?'done':''}"></div>` : ''}
+        <div class="fluxo-step">
+          <div class="fluxo-step-circle ${done?'done':current?'current':''}">${done?'✓':idx+1}</div>
+          <div class="fluxo-step-label ${current?'current':''}">${e.label}<br><span style="color:var(--gold);opacity:0.7;">${e.resp}</span></div>
+        </div>`;
+    }).join('');
+  } else {
+    fluxoSection.style.display = 'none';
+    acoesFluxo.style.display = 'none';
+    acoesAvulso.style.display = 'block';
+    document.getElementById('d-status').value = d.status;
+  }
+
+  document.getElementById('modal-detalhe').classList.add('open');
+}
+
+async function avancarEtapa() {
+  const d = demandas.find(x=>x.id===detalheId);
+  if (!d) return;
+  const novaEtapa = d.etapa_atual + 1;
+  const concluido = novaEtapa >= ETAPAS.length;
+  const { error } = await db.from('demandas').update({
+    etapa_atual: novaEtapa,
+    status: concluido ? 'Concluído' : 'Em andamento'
+  }).eq('id', detalheId);
+  if (error) { alert('Erro: '+error.message); return; }
+  d.etapa_atual = novaEtapa;
+  if (concluido) d.status = 'Concluído';
+  openDetalhe(detalheId);
+  renderKanban();
+  toast(concluido ? 'Demanda concluída!' : `Avançou para: ${ETAPAS[novaEtapa]?.nome||'Concluído'}`);
+}
+
+async function voltarEtapa() {
+  const d = demandas.find(x=>x.id===detalheId);
+  if (!d || d.etapa_atual <= 0) return;
+  const novaEtapa = d.etapa_atual - 1;
+  const { error } = await db.from('demandas').update({ etapa_atual: novaEtapa, status: 'Em andamento' }).eq('id', detalheId);
+  if (error) { alert('Erro: '+error.message); return; }
+  d.etapa_atual = novaEtapa;
+  d.status = 'Em andamento';
+  openDetalhe(detalheId);
+  renderKanban();
+  toast(`Voltou para: ${ETAPAS[novaEtapa]?.nome}`);
+}
+
+async function atualizarStatusAvulso() {
+  const novoStatus = document.getElementById('d-status').value;
+  const { error } = await db.from('demandas').update({ status: novoStatus }).eq('id', detalheId);
+  if (error) { alert('Erro: '+error.message); return; }
+  const d = demandas.find(x=>x.id===detalheId);
+  if (d) d.status = novoStatus;
+  renderKanban();
+  toast('Status atualizado!');
+}
+
+async function excluirDemanda() {
+  if (!confirm('Deseja excluir esta demanda?')) return;
+  const { error } = await db.from('demandas').delete().eq('id', detalheId);
+  if (error) { alert('Erro: '+error.message); return; }
+  demandas = demandas.filter(x=>x.id!==detalheId);
+  closeModal('modal-detalhe');
+  renderKanban();
+  toast('Demanda excluída.');
+}
+
+async function addColaborador() {
+  const input = document.getElementById('novo-colaborador');
+  const nome = input.value.trim();
+  if (!nome) return;
+  const { data, error } = await db.from('colaboradores').insert([{ nome }]).select();
+  if (error) { alert('Erro: '+error.message); return; }
+  colaboradores.push(data[0]);
+  input.value = '';
+  renderEquipeListaConfig();
+  renderEquipeSelect();
+  toast('Membro adicionado!');
+}
+
+async function removeColaborador(id) {
+  if (!confirm('Remover membro?')) return;
+  const { error } = await db.from('colaboradores').delete().eq('id', id);
+  if (error) { alert('Erro: '+error.message); return; }
+  colaboradores = colaboradores.filter(c=>c.id!==id);
+  renderEquipeListaConfig();
+  renderEquipeSelect();
+  toast('Membro removido.');
+}
+
+async function init() {
+  const [{ data: d }, { data: c }] = await Promise.all([
+    db.from('demandas').select('*').order('created_at', { ascending: false }),
+    db.from('colaboradores').select('*').order('created_at', { ascending: true })
+  ]);
+  demandas = d || [];
+  colaboradores = c || [];
+  renderKanban();
+  renderEquipeSelect();
+}
+
+init();
+</script>
+</body>
+</html>
