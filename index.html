@@ -349,18 +349,7 @@
       </div>
       <div class="field">
         <label>Tipo de demanda *</label>
-        <select id="f-tipo">
-          <option value="">Selecione...</option>
-          <option>Processo Judicial</option>
-          <option>Consulta Jurídica</option>
-          <option>Elaboração de Contrato</option>
-          <option>Inventário</option>
-          <option>Divórcio</option>
-          <option>Direito Trabalhista</option>
-          <option>Direito do Consumidor</option>
-          <option>Direito de Família</option>
-          <option>Outro</option>
-        </select>
+        <input type="text" id="f-tipo" placeholder="Ex: Processo Judicial, Inventário, Divórcio..." />
       </div>
       <div id="campo-resp-avulso" style="display:none">
         <div class="field">
@@ -488,7 +477,6 @@ const ETAPAS = [
   { nome: 'Revisão',            resp: 'Monica', label: 'Revisão' },
   { nome: 'Canva + Organização',resp: 'Clara',  label: 'Canva' },
   { nome: 'Protocolo',          resp: 'Munize', label: 'Protocolo' },
-  { nome: 'Acompanhamento',     resp: 'Clara',  label: 'Acompan.' },
 ];
 
 let db;
