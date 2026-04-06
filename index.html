@@ -175,7 +175,33 @@
   .obs-etapa-textarea:focus { border-color: var(--gold); }
   .obs-etapa-btn { margin-top: 4px; padding: 4px 12px; font-size: 11px; font-family: 'DM Sans', sans-serif; border: 1px solid var(--gold); border-radius: 4px; background: transparent; color: var(--gold); cursor: pointer; transition: all 0.15s; }
   .obs-etapa-btn:hover { background: rgba(201,168,76,0.1); }
-  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--gold); color: var(--black); padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+  
+  .senha-screen { position:fixed;top:0;left:0;width:100%;height:100%;background:var(--black);z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px; }
+  .senha-logo { font-family:'Playfair Display',serif;font-size:44px;font-weight:700;color:var(--gold);letter-spacing:4px;margin-bottom:4px; }
+  .senha-sub { font-size:10px;color:rgba(255,255,255,0.5);letter-spacing:3px;text-transform:uppercase;margin-bottom:48px; }
+  .senha-box { background:rgba(255,255,255,0.05);border:1px solid rgba(201,168,76,0.2);border-radius:12px;padding:32px;width:100%;max-width:320px;text-align:center; }
+  .senha-title { font-size:13px;color:rgba(255,255,255,0.6);margin-bottom:20px; }
+  .senha-input { width:100%;padding:12px 16px;font-size:22px;font-family:'DM Sans',sans-serif;text-align:center;letter-spacing:10px;border:1px solid rgba(201,168,76,0.3);border-radius:8px;background:rgba(255,255,255,0.06);color:var(--white);outline:none;margin-bottom:14px; }
+  .senha-input:focus { border-color:var(--gold); }
+  .senha-btn { width:100%;padding:11px;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;border:none;border-radius:8px;background:var(--gold);color:var(--black);cursor:pointer; }
+  .senha-erro { font-size:12px;color:#E57373;margin-top:10px;display:none; }
+  .hist-fase { padding:8px 0;border-bottom:0.5px solid var(--border);font-size:12px; }
+  .hist-fase:last-child { border-bottom:none; }
+  .hist-fase-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:2px; }
+  .hist-fase-etapa { font-weight:500;color:var(--gold-light); }
+  .hist-fase-data { color:var(--gray-text);font-size:11px; }
+  .hist-fase-quem { color:var(--white);font-size:11px; }
+  .fin-grid { display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px; }
+  .fin-card { background:var(--black-light);border:1px solid var(--border);border-radius:8px;padding:12px 14px; }
+  .fin-label { font-size:10px;color:var(--gray-text);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px; }
+  .fin-value { font-size:18px;font-weight:500;color:var(--white); }
+  .fin-value.green { color:#50C878; }
+  .fin-value.gold { color:var(--gold); }
+  .parcela-item { display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:0.5px solid var(--border);font-size:12px; }
+  .parcela-item:last-child { border-bottom:none; }
+  .parcela-paga { color:#50C878;font-weight:500; }
+  .parcela-pendente { color:var(--gray-text); }
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--gold); color: var(--black); padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
   .toast.show { opacity: 1; }
 
   @media (max-width: 768px) {
@@ -189,6 +215,26 @@
 </head>
 <body>
 
+<!-- TELA DE SENHA -->
+<div class="senha-screen" id="senha-screen">
+  <div class="senha-logo">MB</div>
+  <div class="senha-sub">Monica Bleg — Centro de Advocacia</div>
+  <div class="senha-box">
+    <div class="senha-title">Digite a senha de acesso</div>
+    <input class="senha-input" type="password" id="senha-input" placeholder="••••" maxlength="10" onkeydown="if(event.key==='Enter')verificarSenha()" />
+    <button class="senha-btn" onclick="verificarSenha()">Entrar</button>
+    <div class="senha-erro" id="senha-erro">Senha incorreta.</div>
+  </div>
+</div>
+
+<!-- TELA DE IDENTIFICAÇÃO -->
+<div id="login-screen" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:var(--black);z-index:999;flex-direction:column;align-items:center;justify-content:center;padding:24px;">
+  <div style="font-family:'Playfair Display',serif;font-size:36px;font-weight:700;color:var(--gold);letter-spacing:4px;margin-bottom:4px;">MB</div>
+  <div style="font-size:10px;color:rgba(255,255,255,0.5);letter-spacing:3px;text-transform:uppercase;margin-bottom:40px;">Monica Bleg — Centro de Advocacia</div>
+  <div style="font-size:14px;color:rgba(255,255,255,0.7);margin-bottom:24px;">Quem é você?</div>
+  <div id="login-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;width:100%;max-width:460px;"></div>
+</div>
+
 <aside class="sidebar">
   <div class="sidebar-logo">
     <div class="logo-monogram">MB</div>
@@ -198,7 +244,7 @@
   </div>
   <nav class="sidebar-nav">
     <div class="nav-section">Gestão</div>
-    <div class="nav-item active" id="nav-kanban" onclick="showView('kanban')">
+    <div class="nav-item active" id="nav-kanban" onclick="verificarMonica();showView('kanban')">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
         <rect x="1" y="2" width="4" height="12" rx="1"/><rect x="6" y="2" width="4" height="8" rx="1"/><rect x="11" y="2" width="4" height="10" rx="1"/>
       </svg>
@@ -217,6 +263,14 @@
       Clientes
     </div>
     <div class="nav-section">Equipe</div>
+    <div class="nav-item" id="nav-financeiro" onclick="showView('financeiro')" style="display:none;">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="1" y="1" width="14" height="14" rx="2"/>
+        <line x1="4" y1="11" x2="4" y2="6"/><line x1="7" y1="11" x2="7" y2="4"/>
+        <line x1="10" y1="11" x2="10" y2="7"/><line x1="13" y1="11" x2="13" y2="5"/>
+      </svg>
+      Financeiro
+    </div>
     <div class="nav-item" id="nav-equipe" onclick="showView('equipe')">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
         <circle cx="5" cy="5" r="2.5"/><circle cx="11" cy="5" r="2.5"/>
@@ -246,7 +300,15 @@
     </div>
   </div>
 
-  <div class="content">
+  <div id="user-banner" style="display:none;background:rgba(201,168,76,0.08);border-bottom:1px solid var(--border);padding:8px 28px;align-items:center;justify-content:space-between;">
+  <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--white);">
+    <div id="banner-avatar" style="width:28px;height:28px;border-radius:50%;background:rgba(201,168,76,0.2);border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:var(--gold);font-family:'Playfair Display',serif;"></div>
+    <span>Olá, <strong id="banner-nome"></strong>!</span>
+  </div>
+  <button onclick="sairColaborador()" style="font-size:12px;color:var(--gray-text);border:none;background:none;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;">Trocar usuário</button>
+</div>
+
+<div class="content">
 
     <!-- KANBAN -->
     <div id="view-kanban">
@@ -328,6 +390,32 @@
       </div>
     </div>
 
+    <!-- FINANCEIRO (só Monica) -->
+    <div id="view-financeiro" style="display:none">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+        <button class="btn-nova" onclick="openModal('modal-fin-novo')">+ Novo lançamento</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:20px;">
+        <div class="fin-card" style="border-top:2px solid #50C878;"><div class="fin-label">Total entradas</div><div class="fin-value green" id="fin-total-entradas">R$ 0,00</div></div>
+        <div class="fin-card" style="border-top:2px solid var(--gold);"><div class="fin-label">A receber</div><div class="fin-value gold" id="fin-total-receber">R$ 0,00</div></div>
+        <div class="fin-card" style="border-top:2px solid #4A90D9;"><div class="fin-label">Contratos ativos</div><div class="fin-value" id="fin-total-contratos">0</div></div>
+      </div>
+      <div style="background:var(--black-card);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr style="background:var(--black-light);">
+            <th style="padding:11px 14px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1.2px;color:var(--gold);text-align:left;">Cliente</th>
+            <th style="padding:11px 14px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1.2px;color:var(--gold);text-align:left;">Serviço</th>
+            <th style="padding:11px 14px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1.2px;color:var(--gold);text-align:left;">Valor total</th>
+            <th style="padding:11px 14px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1.2px;color:var(--gold);text-align:left;">Pagamento</th>
+            <th style="padding:11px 14px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1.2px;color:var(--gold);text-align:left;">A receber</th>
+            <th style="padding:11px 14px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1.2px;color:var(--gold);text-align:left;">Data</th>
+            <th style="padding:11px 14px;"></th>
+          </tr></thead>
+          <tbody id="tabela-financeiro"></tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 </main>
 
@@ -339,9 +427,10 @@
       <button class="modal-close" onclick="closeModal('modal-nova')">×</button>
     </div>
     <div class="modal-body">
-      <div class="tipo-toggle">
-        <button class="tipo-btn active" id="btn-fluxo" onclick="setTipo('fluxo')">Fluxo padrão (6 etapas)</button>
-        <button class="tipo-btn" id="btn-avulso" onclick="setTipo('avulso')">Demanda avulsa</button>
+      <div class="field">
+        <label>Iniciar na etapa</label>
+        <select id="f-etapa-inicial" style="width:100%;padding:9px 11px;font-size:13px;font-family:'DM Sans',sans-serif;border:1px solid var(--gray-light);border-radius:6px;color:var(--white);background:var(--black-card);outline:none;">
+        </select>
       </div>
       <div class="fields-row">
         <div class="field"><label>Nome do cliente *</label><input type="text" id="f-nome" placeholder="Nome completo" /></div>
@@ -351,12 +440,7 @@
         <label>Tipo de demanda *</label>
         <input type="text" id="f-tipo" placeholder="Ex: Processo Judicial, Inventário, Divórcio..." />
       </div>
-      <div id="campo-resp-avulso" style="display:none">
-        <div class="field">
-          <label>Delegar para *</label>
-          <select id="f-resp-avulso"><option value="">Selecione...</option></select>
-        </div>
-      </div>
+
       <div class="field">
         <label>Número do processo</label>
         <input type="text" id="f-processo" placeholder="Ex: 0000000-00.0000.0.00.0000" />
@@ -403,11 +487,20 @@
       </div>
       <div id="d-acoes-fluxo" style="display:none">
         <div class="field">
-          <label>Ação</label>
-          <div style="display:flex;gap:8px;margin-top:4px;">
-            <button class="btn-prim" style="flex:1;" onclick="avancarEtapa()">Avançar etapa →</button>
-            <button class="btn-sec" onclick="voltarEtapa()">← Voltar</button>
-          </div>
+          <label>Quem realizou esta etapa *</label>
+          <input type="text" id="d-quem-fez" placeholder="Nome de quem concluiu" style="width:100%;padding:8px 10px;font-size:13px;font-family:'DM Sans',sans-serif;border:1px solid var(--gray-light);border-radius:6px;color:var(--white);background:var(--black-card);outline:none;" />
+        </div>
+        <div class="field">
+          <label>Observação (opcional)</label>
+          <input type="text" id="d-obs-avanco" placeholder="Ex: Documentos enviados por email" style="width:100%;padding:8px 10px;font-size:13px;font-family:'DM Sans',sans-serif;border:1px solid var(--gray-light);border-radius:6px;color:var(--white);background:var(--black-card);outline:none;" />
+        </div>
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          <button class="btn-prim" style="flex:1;" onclick="avancarEtapa()">Concluir etapa e avançar →</button>
+          <button class="btn-sec" onclick="voltarEtapa()">← Voltar</button>
+        </div>
+        <div style="margin-top:16px;">
+          <div class="metric-label" style="margin-bottom:8px;">Histórico de fases</div>
+          <div id="d-hist-fases"></div>
         </div>
       </div>
       <div id="d-acoes-avulso" style="display:none">
@@ -426,6 +519,65 @@
     <div class="modal-footer">
       <button class="btn-danger" onclick="excluirDemanda()">Excluir</button>
       <button class="btn-sec" onclick="closeModal('modal-detalhe')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL FINANCEIRO -->
+<div class="modal-overlay" id="modal-fin-novo">
+  <div class="modal-box">
+    <div class="modal-header"><h2>Novo lançamento</h2><button class="modal-close" onclick="closeModal('modal-fin-novo')">×</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Cliente *</label><input type="text" id="fn-cliente" placeholder="Nome do cliente" /></div>
+      <div class="field"><label>Serviço *</label><input type="text" id="fn-servico" placeholder="Ex: Processo Judicial, Inventário..." /></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="field"><label>Valor total (R$) *</label><input type="number" id="fn-valor" placeholder="0,00" step="0.01" oninput="calcFinParcelas()" /></div>
+        <div class="field"><label>Data de fechamento *</label><input type="date" id="fn-data" /></div>
+      </div>
+      <div class="field">
+        <label>Forma de pagamento</label>
+        <select id="fn-pagamento" onchange="toggleFinParcelas()" style="width:100%;padding:9px 11px;font-size:13px;font-family:'DM Sans',sans-serif;border:1px solid var(--gray-light);border-radius:6px;color:var(--white);background:var(--black-card);outline:none;">
+          <option value="avista">À vista</option>
+          <option value="parcelado">Parcelado</option>
+        </select>
+      </div>
+      <div id="fn-parcelas-wrap" style="display:none;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="field"><label>Entrada (R$)</label><input type="number" id="fn-entrada" placeholder="0,00" step="0.01" oninput="calcFinParcelas()" /></div>
+          <div class="field"><label>Nº de parcelas</label><input type="number" id="fn-nparcelas" placeholder="Ex: 3" min="1" oninput="calcFinParcelas()" /></div>
+        </div>
+        <div id="fn-parcela-valor" style="font-size:12px;color:var(--gray-text);margin-top:-8px;margin-bottom:12px;"></div>
+      </div>
+      <div class="field"><label>Observações</label><textarea id="fn-obs" placeholder="Anotações..." style="width:100%;padding:9px 11px;font-size:13px;font-family:'DM Sans',sans-serif;border:1px solid var(--gray-light);border-radius:6px;color:var(--white);background:var(--black-card);outline:none;resize:vertical;min-height:60px;"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sec" onclick="closeModal('modal-fin-novo')">Cancelar</button>
+      <button class="btn-prim" onclick="salvarLancamentoFin()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALHE FINANCEIRO -->
+<div class="modal-overlay" id="modal-fin-detalhe">
+  <div class="modal-box">
+    <div class="modal-header"><h2 id="fd-cliente-header">Detalhe</h2><button class="modal-close" onclick="closeModal('modal-fin-detalhe')">×</button></div>
+    <div class="modal-body">
+      <div class="detail-section">
+        <div class="detail-row"><span>Serviço</span><span id="fd-servico">—</span></div>
+        <div class="detail-row"><span>Valor total</span><span id="fd-valor" style="color:#50C878;font-weight:500;">—</span></div>
+        <div class="detail-row"><span>Pagamento</span><span id="fd-pagamento">—</span></div>
+        <div class="detail-row"><span>Data fechamento</span><span id="fd-data">—</span></div>
+      </div>
+      <div class="fin-grid">
+        <div class="fin-card"><div class="fin-label">Total recebido</div><div class="fin-value green" id="fd-recebido">R$ 0,00</div></div>
+        <div class="fin-card"><div class="fin-label">A receber</div><div class="fin-value gold" id="fd-restante">R$ 0,00</div></div>
+      </div>
+      <div class="metric-label" style="margin:10px 0 6px;">Parcelas</div>
+      <div id="fd-parcelas-lista"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-danger" onclick="excluirLancamentoFin()">Excluir</button>
+      <button class="btn-sec" onclick="closeModal('modal-fin-detalhe')">Fechar</button>
     </div>
   </div>
 </div>
@@ -461,6 +613,177 @@ const SUPABASE_KEY = 'sb_publishable_SyKFnORtXNobLC-VQZqVTQ_l2L1Te1f';
 // db initialized after load
 
 // FLUXO PADRÃO
+
+
+const SENHA_MB = '0713';
+let finLancamentos = JSON.parse(localStorage.getItem('mb_financeiro') || '[]');
+let finNextId = parseInt(localStorage.getItem('mb_fin_nextid') || '1');
+let finDetalheId = null;
+let usuarioMonica = null;
+
+function saveFinanceiro() {
+  localStorage.setItem('mb_financeiro', JSON.stringify(finLancamentos));
+  localStorage.setItem('mb_fin_nextid', String(finNextId));
+}
+
+function verificarMonica() {
+  if (!usuarioMonica) {
+    const nome = prompt('Qual é o seu nome?');
+    if (nome) {
+      usuarioMonica = nome.trim();
+      const navFin = document.getElementById('nav-financeiro');
+      if (navFin && usuarioMonica.toLowerCase().includes('monica')) {
+        navFin.style.display = 'flex';
+      }
+    }
+  }
+}
+
+function fmtMoeda(v) {
+  return 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 });
+}
+
+function fmtData(str) {
+  if (!str) return '—';
+  const [y,m,d] = str.split('-');
+  return d+'/'+m+'/'+y;
+}
+
+// ── SENHA ──
+
+
+// ── ETAPA INICIAL SELECT ──
+function initEtapaSelect() {
+  const sel = document.getElementById('f-etapa-inicial');
+  if (!sel) return;
+  sel.innerHTML = ETAPAS.map((e,i) => `<option value="${i}">${i+1}. ${e.nome} (${e.resp})</option>`).join('');
+}
+
+// ── FINANCEIRO ──
+function toggleFinParcelas() {
+  const pag = document.getElementById('fn-pagamento').value;
+  document.getElementById('fn-parcelas-wrap').style.display = pag === 'parcelado' ? 'block' : 'none';
+  calcFinParcelas();
+}
+
+function calcFinParcelas() {
+  const valor = parseFloat(document.getElementById('fn-valor').value) || 0;
+  const entrada = parseFloat(document.getElementById('fn-entrada').value) || 0;
+  const n = parseInt(document.getElementById('fn-nparcelas').value) || 0;
+  const el = document.getElementById('fn-parcela-valor');
+  if (n > 0 && valor > 0) {
+    const vlrParc = (valor - entrada) / n;
+    el.textContent = `Cada parcela: ${fmtMoeda(vlrParc)}`;
+  } else { el.textContent = ''; }
+}
+
+function salvarLancamentoFin() {
+  const cliente = document.getElementById('fn-cliente').value.trim();
+  const servico = document.getElementById('fn-servico').value.trim();
+  const valor = parseFloat(document.getElementById('fn-valor').value) || 0;
+  const data = document.getElementById('fn-data').value;
+  if (!cliente || !servico || !valor || !data) { alert('Preencha cliente, serviço, valor e data.'); return; }
+  const pagamento = document.getElementById('fn-pagamento').value;
+  const entrada = parseFloat(document.getElementById('fn-entrada').value) || 0;
+  const nParcelas = parseInt(document.getElementById('fn-nparcelas').value) || 1;
+  const obs = document.getElementById('fn-obs').value.trim();
+  const parcelas = [];
+  if (pagamento === 'avista') {
+    parcelas.push({ n: 1, valor, pago: false });
+  } else {
+    if (entrada > 0) parcelas.push({ n: 0, valor: entrada, pago: false, label: 'Entrada' });
+    const vlrParc = nParcelas > 0 ? (valor - entrada) / nParcelas : 0;
+    for (let i = 1; i <= nParcelas; i++) parcelas.push({ n: i, valor: vlrParc, pago: false });
+  }
+  finLancamentos.unshift({ id: finNextId++, cliente, servico, valor, data, pagamento, entrada, nParcelas, obs, parcelas });
+  saveFinanceiro();
+  closeModal('modal-fin-novo');
+  ['fn-cliente','fn-servico','fn-valor','fn-entrada','fn-nparcelas','fn-obs'].forEach(x => { const el=document.getElementById(x); if(el) el.value=''; });
+  document.getElementById('fn-pagamento').value = 'avista';
+  document.getElementById('fn-parcelas-wrap').style.display = 'none';
+  renderFinanceiro();
+  toast('Lançamento salvo!');
+}
+
+function renderFinanceiro() {
+  const totalEntradas = finLancamentos.reduce((s,l) => s + (parseFloat(l.valor)||0), 0);
+  const totalRecebido = finLancamentos.reduce((s,l) => s + l.parcelas.filter(p=>p.pago).reduce((ss,p)=>ss+(parseFloat(p.valor)||0),0), 0);
+  const aReceber = totalEntradas - totalRecebido;
+  document.getElementById('fin-total-entradas').textContent = fmtMoeda(totalEntradas);
+  document.getElementById('fin-total-receber').textContent = fmtMoeda(aReceber);
+  document.getElementById('fin-total-contratos').textContent = finLancamentos.length;
+  const tbody = document.getElementById('tabela-financeiro');
+  if (!finLancamentos.length) { tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">Nenhum lançamento cadastrado.</div></td></tr>`; return; }
+  tbody.innerHTML = finLancamentos.map(l => {
+    const recebido = l.parcelas.filter(p=>p.pago).reduce((s,p)=>s+(parseFloat(p.valor)||0),0);
+    const restante = (parseFloat(l.valor)||0) - recebido;
+    const quitado = restante <= 0;
+    return `<tr style="border-bottom:1px solid var(--border);cursor:pointer;" onclick="abrirFinDetalhe(${l.id})">
+      <td style="padding:12px 14px;font-size:13px;font-weight:500;color:var(--white);">${l.cliente}</td>
+      <td style="padding:12px 14px;font-size:12px;color:var(--gold-light);">${l.servico}</td>
+      <td style="padding:12px 14px;font-size:13px;font-weight:500;color:#50C878;">${fmtMoeda(l.valor)}</td>
+      <td style="padding:12px 14px;font-size:12px;color:var(--gray-text);">${l.pagamento==='avista'?'À vista':'Parcelado'}</td>
+      <td style="padding:12px 14px;font-size:13px;font-weight:500;color:${quitado?'#50C878':'var(--gold)'};">${quitado?'Quitado':fmtMoeda(restante)}</td>
+      <td style="padding:12px 14px;font-size:12px;color:var(--gray-text);">${fmtData(l.data)}</td>
+      <td style="padding:12px 14px;"><span style="font-size:10px;padding:2px 8px;border-radius:99px;background:${quitado?'rgba(80,200,120,0.15)':'rgba(201,168,76,0.15)'};color:${quitado?'#50C878':'var(--gold)'};">${quitado?'Quitado':'Pendente'}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function abrirFinDetalhe(id) {
+  finDetalheId = id;
+  const l = finLancamentos.find(x=>x.id===id);
+  document.getElementById('fd-cliente-header').textContent = l.cliente;
+  document.getElementById('fd-servico').textContent = l.servico;
+  document.getElementById('fd-valor').textContent = fmtMoeda(l.valor);
+  document.getElementById('fd-pagamento').textContent = l.pagamento==='avista'?'À vista':'Parcelado';
+  document.getElementById('fd-data').textContent = fmtData(l.data);
+  const recebido = l.parcelas.filter(p=>p.pago).reduce((s,p)=>s+(parseFloat(p.valor)||0),0);
+  const restante = (parseFloat(l.valor)||0) - recebido;
+  document.getElementById('fd-recebido').textContent = fmtMoeda(recebido);
+  document.getElementById('fd-restante').textContent = fmtMoeda(restante);
+  const lista = document.getElementById('fd-parcelas-lista');
+  lista.innerHTML = l.parcelas.map((p,i) => `
+    <div class="parcela-item">
+      <span class="${p.pago?'parcela-paga':'parcela-pendente'}">${p.label||'Parcela '+p.n} — ${fmtMoeda(p.valor)}</span>
+      <button onclick="toggleParcela(${i})" style="font-size:11px;padding:3px 10px;border:1px solid ${p.pago?'rgba(80,200,120,0.4)':'var(--border)'};border-radius:4px;background:transparent;color:${p.pago?'#50C878':'var(--gray-text)'};cursor:pointer;font-family:'DM Sans',sans-serif;">${p.pago?'Pago ✓':'Dar baixa'}</button>
+    </div>`).join('');
+  document.getElementById('modal-fin-detalhe').classList.add('open');
+}
+
+function toggleParcela(idx) {
+  const l = finLancamentos.find(x=>x.id===finDetalheId);
+  if (!l) return;
+  l.parcelas[idx].pago = !l.parcelas[idx].pago;
+  saveFinanceiro();
+  abrirFinDetalhe(finDetalheId);
+  renderFinanceiro();
+  toast(l.parcelas[idx].pago ? 'Baixa registrada!' : 'Baixa desfeita.');
+}
+
+function excluirLancamentoFin() {
+  if (!confirm('Excluir este lançamento?')) return;
+  finLancamentos = finLancamentos.filter(x=>x.id!==finDetalheId);
+  saveFinanceiro();
+  closeModal('modal-fin-detalhe');
+  renderFinanceiro();
+  toast('Lançamento excluído.');
+}
+
+// ── HISTÓRICO DE FASES ──
+function renderHistFases(d) {
+  const hist = d.hist_fases ? (typeof d.hist_fases==='string' ? JSON.parse(d.hist_fases) : d.hist_fases) : [];
+  if (!hist.length) return '<div style="font-size:12px;color:var(--gray-text);">Nenhuma fase concluída ainda.</div>';
+  return hist.map(h => `
+    <div class="hist-fase">
+      <div class="hist-fase-header">
+        <span class="hist-fase-etapa">${h.etapa}</span>
+        <span class="hist-fase-data">${h.data}</span>
+      </div>
+      <div class="hist-fase-quem">Realizado por: <strong>${h.quem}</strong></div>
+      ${h.obs ? `<div style="font-size:11px;color:var(--gray-text);margin-top:2px;">${h.obs}</div>` : ''}
+    </div>`).join('');
+}
 
 const CORES_COLAB = {
   'Clara':  { bg: 'rgba(212,184,150,0.15)', border: '#D4B896', text: '#D4B896', avatar_bg: 'rgba(212,184,150,0.2)' },
@@ -545,19 +868,13 @@ function renderKanban() {
   // Colunas do fluxo padrão
   ETAPAS.forEach((etapa, idx) => {
     const cards = demandas.filter(d =>
-      d.tipo_fluxo === 'fluxo' &&
       d.etapa_atual === idx &&
       d.status !== 'Cancelado'
     );
     cols.push({ titulo: etapa.nome, resp: etapa.resp, cards, tipo: 'etapa' });
   });
 
-  // Coluna de avulsas ativas
-  const avulsas = demandas.filter(d =>
-    d.tipo_fluxo === 'avulso' &&
-    d.status !== 'Concluído' && d.status !== 'Cancelado'
-  );
-  cols.push({ titulo: 'Demandas avulsas', resp: 'Delegadas', cards: avulsas, tipo: 'avulso' });
+  
 
   // Coluna concluídas
   const concluidas = demandas.filter(d =>
@@ -671,23 +988,19 @@ function setFilter(el) {
   renderLista();
 }
 
-function setTipo(tipo) {
-  tipoNova = tipo;
-  document.getElementById('btn-fluxo').classList.toggle('active', tipo==='fluxo');
-  document.getElementById('btn-avulso').classList.toggle('active', tipo==='avulso');
-  document.getElementById('campo-resp-avulso').style.display = tipo==='avulso' ? 'block' : 'none';
-}
+
 
 function showView(view) {
-  ['kanban','demandas','clientes','equipe','relatorio'].forEach(v=>document.getElementById('view-'+v).style.display=v===view?'block':'none');
-  ['kanban','demandas','clientes','equipe','relatorio'].forEach(v=>document.getElementById('nav-'+v).classList.remove('active'));
+  ['kanban','demandas','clientes','equipe','relatorio','financeiro'].forEach(v=>document.getElementById('view-'+v).style.display=v===view?'block':'none');
+  ['kanban','demandas','clientes','equipe','relatorio','financeiro'].forEach(v=>{ const el=document.getElementById('nav-'+v); if(el) el.classList.remove('active'); });
   document.getElementById('nav-'+view).classList.add('active');
-  const titles = { kanban:'Fluxo de trabalho', demandas:'Todas as demandas', clientes:'Clientes', equipe:'Advogados', relatorio:'Relatório mensal' };
+  const titles = { kanban:'Fluxo de trabalho', demandas:'Todas as demandas', clientes:'Clientes', equipe:'Advogados', relatorio:'Relatório mensal', financeiro:'Financeiro' };
   document.getElementById('view-title').textContent = titles[view];
   if (view==='demandas') renderLista();
   if (view==='clientes') renderClientes();
   if (view==='equipe') { renderEquipeTabela(); renderEquipeListaConfig(); }
   if (view==='relatorio') { initRelatorio(); renderRelatorio(); }
+  if (view==='financeiro') renderFinanceiro();
 }
 
 function openModal(id) {
@@ -708,7 +1021,7 @@ async function salvarDemanda() {
   const nome = document.getElementById('f-nome').value.trim();
   const tipo = document.getElementById('f-tipo').value;
   if (!nome||!tipo) { alert('Preencha nome e tipo de demanda.'); return; }
-  if (tipoNova==='avulso' && !document.getElementById('f-resp-avulso').value) { alert('Selecione o responsável.'); return; }
+
   const btn = document.getElementById('btn-salvar');
   btn.disabled=true; btn.textContent='Salvando...';
   const payload = {
@@ -792,6 +1105,13 @@ function openDetalhe(id) {
     obsEtapasSection.style.display = 'none';
   }
 
+  // Histórico de fases
+  const histEl = document.getElementById('d-hist-fases');
+  if (histEl) histEl.innerHTML = renderHistFases(d);
+  // Limpar campos de avanço
+  const quemEl = document.getElementById('d-quem-fez'); if(quemEl) quemEl.value='';
+  const obsEl2 = document.getElementById('d-obs-avanco'); if(obsEl2) obsEl2.value='';
+
   document.getElementById('modal-detalhe').classList.add('open');
 }
 
@@ -809,14 +1129,22 @@ async function salvarObsEtapa(idx) {
 async function avancarEtapa() {
   const d = demandas.find(x=>x.id===detalheId);
   if (!d) return;
+  const quem = document.getElementById('d-quem-fez') ? document.getElementById('d-quem-fez').value.trim() : '';
+  if (!quem) { alert('Informe quem realizou esta etapa.'); return; }
+  const obsAvanco = document.getElementById('d-obs-avanco') ? document.getElementById('d-obs-avanco').value.trim() : '';
+  const etapaFeita = ETAPAS[d.etapa_atual]?.nome || '';
   const novaEtapa = d.etapa_atual + 1;
   const concluido = novaEtapa >= ETAPAS.length;
+  const hist = d.hist_fases ? (typeof d.hist_fases==='string' ? JSON.parse(d.hist_fases) : d.hist_fases) : [];
+  hist.push({ etapa: etapaFeita, quem, obs: obsAvanco, data: hoje() });
   const { error } = await db.from('demandas').update({
     etapa_atual: novaEtapa,
-    status: concluido ? 'Concluído' : 'Em andamento'
+    status: concluido ? 'Concluído' : 'Em andamento',
+    hist_fases: JSON.stringify(hist)
   }).eq('id', detalheId);
   if (error) { alert('Erro: '+error.message); return; }
   d.etapa_atual = novaEtapa;
+  d.hist_fases = JSON.stringify(hist);
   if (concluido) d.status = 'Concluído';
   openDetalhe(detalheId);
   renderKanban();
@@ -972,7 +1300,212 @@ async function init() {
   colaboradores = c || [];
   renderKanban();
   renderEquipeSelect();
+  // Checar autenticação após carregar dados
+  setTimeout(() => {
+    if (sessionStorage.getItem('mb_auth') !== '1') {
+      document.getElementById('senha-screen').style.display = 'flex';
+    } else {
+      checarSessao();
+    }
+  }, 100);
 }
+
+// ── LOGIN POR COLABORADOR ──
+let colaboradorAtual = sessionStorage.getItem('mb_colaborador') || null;
+const SENHA_MB = '0713';
+
+function iniciais(nome) {
+  return (nome||'').trim().split(' ').filter(Boolean).slice(0,2).map(n=>n[0]).join('').toUpperCase();
+}
+
+function renderLoginGrid() {
+  const grid = document.getElementById('login-grid');
+  if (!grid) return;
+  const fixos = ['Clara','Monica','Munize'];
+  const extras = colaboradores.filter(c => !fixos.includes(c.nome)).map(c=>c.nome);
+  const todos = [...fixos, ...extras];
+  grid.innerHTML = todos.map(nome => `
+    <div onclick="loginComo('${nome}')" style="background:rgba(255,255,255,0.05);border:1px solid rgba(201,168,76,0.2);border-radius:10px;padding:18px 14px;cursor:pointer;text-align:center;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--gold)';this.style.background='rgba(201,168,76,0.08)'" onmouseout="this.style.borderColor='rgba(201,168,76,0.2)';this.style.background='rgba(255,255,255,0.05)'">
+      <div style="width:44px;height:44px;border-radius:50%;background:rgba(201,168,76,0.15);border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:500;color:var(--gold);font-family:'Playfair Display',serif;margin:0 auto 10px;">${iniciais(nome)}</div>
+      <div style="font-size:13px;font-weight:500;color:var(--white);">${nome}</div>
+    </div>`).join('');
+}
+
+function loginComo(nome) {
+  colaboradorAtual = nome;
+  sessionStorage.setItem('mb_colaborador', nome);
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('user-banner').style.display = 'flex';
+  document.getElementById('banner-nome').textContent = nome;
+  document.getElementById('banner-avatar').textContent = iniciais(nome);
+  const navFin = document.getElementById('nav-financeiro');
+  if (navFin) navFin.style.display = nome === 'Monica' ? 'flex' : 'none';
+}
+
+function sairColaborador() {
+  colaboradorAtual = null;
+  sessionStorage.removeItem('mb_colaborador');
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('user-banner').style.display = 'none';
+  const navFin = document.getElementById('nav-financeiro');
+  if (navFin) navFin.style.display = 'none';
+  renderLoginGrid();
+}
+
+function verificarSenha() {
+  const v = document.getElementById('senha-input').value;
+  if (v === SENHA_MB) {
+    sessionStorage.setItem('mb_auth', '1');
+    document.getElementById('senha-screen').style.display = 'none';
+    checarSessao();
+  } else {
+    document.getElementById('senha-erro').style.display = 'block';
+    document.getElementById('senha-input').value = '';
+    setTimeout(() => document.getElementById('senha-erro').style.display = 'none', 3000);
+  }
+}
+
+function checarSessao() {
+  const colab = sessionStorage.getItem('mb_colaborador');
+  if (colab) {
+    loginComo(colab);
+  } else {
+    document.getElementById('login-screen').style.display = 'flex';
+    renderLoginGrid();
+  }
+}
+
+function initEtapaSelect() {
+  const sel = document.getElementById('f-etapa-inicial');
+  if (!sel) return;
+  sel.innerHTML = ETAPAS.map((e,i) => `<option value="${i}">${i+1}. ${e.nome}</option>`).join('');
+}
+
+// ── FINANCEIRO MONICA ──
+let finLancamentos = JSON.parse(localStorage.getItem('mb_financeiro') || '[]');
+let finNextId = parseInt(localStorage.getItem('mb_fin_nextid') || '1');
+let finDetalheId = null;
+
+function saveFinanceiro() {
+  localStorage.setItem('mb_financeiro', JSON.stringify(finLancamentos));
+  localStorage.setItem('mb_fin_nextid', String(finNextId));
+}
+
+function fmtMoeda(v) {
+  return 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 });
+}
+
+function fmtData(str) {
+  if (!str) return '—';
+  const [y,m,d] = str.split('-');
+  return d+'/'+m+'/'+y;
+}
+
+function toggleFinParcelas() {
+  const pag = document.getElementById('fn-pagamento').value;
+  document.getElementById('fn-parcelas-wrap').style.display = pag==='parcelado' ? 'block' : 'none';
+  calcFinParcelas();
+}
+
+function calcFinParcelas() {
+  const valor = parseFloat(document.getElementById('fn-valor').value) || 0;
+  const entrada = parseFloat(document.getElementById('fn-entrada')?.value) || 0;
+  const n = parseInt(document.getElementById('fn-nparcelas')?.value) || 0;
+  const el = document.getElementById('fn-parcela-valor');
+  if (el && n > 0 && valor > 0) el.textContent = `Cada parcela: ${fmtMoeda((valor-entrada)/n)}`;
+  else if (el) el.textContent = '';
+}
+
+function salvarLancamentoFin() {
+  const cliente = document.getElementById('fn-cliente').value.trim();
+  const servico = document.getElementById('fn-servico').value.trim();
+  const valor = parseFloat(document.getElementById('fn-valor').value) || 0;
+  const data = document.getElementById('fn-data').value;
+  if (!cliente || !servico || !valor || !data) { alert('Preencha cliente, serviço, valor e data.'); return; }
+  const pagamento = document.getElementById('fn-pagamento').value;
+  const entrada = parseFloat(document.getElementById('fn-entrada')?.value) || 0;
+  const nParcelas = parseInt(document.getElementById('fn-nparcelas')?.value) || 1;
+  const obs = document.getElementById('fn-obs').value.trim();
+  const parcelas = [];
+  if (pagamento === 'avista') {
+    parcelas.push({ n:1, valor, pago:false, label:'À vista' });
+  } else {
+    if (entrada > 0) parcelas.push({ n:0, valor:entrada, pago:false, label:'Entrada' });
+    const vlrParc = nParcelas > 0 ? (valor-entrada)/nParcelas : 0;
+    for (let i=1; i<=nParcelas; i++) parcelas.push({ n:i, valor:vlrParc, pago:false, label:'Parcela '+i });
+  }
+  finLancamentos.unshift({ id:finNextId++, cliente, servico, valor, data, pagamento, entrada, nParcelas, obs, parcelas });
+  saveFinanceiro();
+  closeModal('modal-fin-novo');
+  ['fn-cliente','fn-servico','fn-valor','fn-entrada','fn-nparcelas','fn-obs'].forEach(x=>{ const el=document.getElementById(x); if(el) el.value=''; });
+  renderFinanceiro();
+  toast('Lançamento salvo!');
+}
+
+function renderFinanceiro() {
+  const totalEntradas = finLancamentos.reduce((s,l)=>s+(parseFloat(l.valor)||0),0);
+  const totalRecebido = finLancamentos.reduce((s,l)=>s+l.parcelas.filter(p=>p.pago).reduce((ss,p)=>ss+(parseFloat(p.valor)||0),0),0);
+  document.getElementById('fin-total-entradas').textContent = fmtMoeda(totalEntradas);
+  document.getElementById('fin-total-receber').textContent = fmtMoeda(totalEntradas-totalRecebido);
+  document.getElementById('fin-total-contratos').textContent = finLancamentos.length;
+  const tbody = document.getElementById('tabela-financeiro');
+  if (!tbody) return;
+  if (!finLancamentos.length) { tbody.innerHTML='<tr><td colspan="7"><div class="empty-state">Nenhum lançamento.</div></td></tr>'; return; }
+  tbody.innerHTML = finLancamentos.map(l => {
+    const recebido = l.parcelas.filter(p=>p.pago).reduce((s,p)=>s+(parseFloat(p.valor)||0),0);
+    const restante = (parseFloat(l.valor)||0)-recebido;
+    const quitado = restante <= 0.01;
+    return `<tr style="border-bottom:1px solid var(--border);cursor:pointer;" onclick="abrirFinDetalhe(${l.id})">
+      <td style="padding:12px 14px;font-size:13px;font-weight:500;color:var(--white);">${l.cliente}</td>
+      <td style="padding:12px 14px;font-size:12px;color:var(--gold-light);">${l.servico}</td>
+      <td style="padding:12px 14px;font-size:13px;font-weight:500;color:#50C878;">${fmtMoeda(l.valor)}</td>
+      <td style="padding:12px 14px;font-size:12px;color:var(--gray-text);">${l.pagamento==='avista'?'À vista':'Parcelado'}</td>
+      <td style="padding:12px 14px;font-size:13px;font-weight:500;color:${quitado?'#50C878':'var(--gold)'};">${quitado?'—':fmtMoeda(restante)}</td>
+      <td style="padding:12px 14px;font-size:12px;color:var(--gray-text);">${fmtData(l.data)}</td>
+      <td style="padding:12px 14px;"><span style="font-size:10px;padding:2px 8px;border-radius:99px;background:${quitado?'rgba(80,200,120,0.15)':'rgba(201,168,76,0.15)'};color:${quitado?'#50C878':'var(--gold)'};">${quitado?'Quitado':'Pendente'}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function abrirFinDetalhe(id) {
+  finDetalheId = id;
+  const l = finLancamentos.find(x=>x.id===id);
+  document.getElementById('fd-cliente-header').textContent = l.cliente;
+  document.getElementById('fd-servico').textContent = l.servico;
+  document.getElementById('fd-valor').textContent = fmtMoeda(l.valor);
+  document.getElementById('fd-pagamento').textContent = l.pagamento==='avista'?'À vista':'Parcelado';
+  document.getElementById('fd-data').textContent = fmtData(l.data);
+  const recebido = l.parcelas.filter(p=>p.pago).reduce((s,p)=>s+(parseFloat(p.valor)||0),0);
+  document.getElementById('fd-recebido').textContent = fmtMoeda(recebido);
+  document.getElementById('fd-restante').textContent = fmtMoeda((parseFloat(l.valor)||0)-recebido);
+  document.getElementById('fd-parcelas-lista').innerHTML = l.parcelas.map((p,i) => `
+    <div class="parcela-item">
+      <span class="${p.pago?'parcela-paga':'parcela-pendente'}">${p.label} — ${fmtMoeda(p.valor)}</span>
+      <button onclick="toggleParcela(${i})" style="font-size:11px;padding:3px 10px;border:1px solid ${p.pago?'rgba(80,200,120,0.4)':'var(--border)'};border-radius:4px;background:transparent;color:${p.pago?'#50C878':'var(--gray-text)'};cursor:pointer;font-family:'DM Sans',sans-serif;">${p.pago?'Pago ✓':'Dar baixa'}</button>
+    </div>`).join('');
+  document.getElementById('modal-fin-detalhe').classList.add('open');
+}
+
+function toggleParcela(idx) {
+  const l = finLancamentos.find(x=>x.id===finDetalheId);
+  if (!l) return;
+  l.parcelas[idx].pago = !l.parcelas[idx].pago;
+  saveFinanceiro();
+  abrirFinDetalhe(finDetalheId);
+  renderFinanceiro();
+  toast(l.parcelas[idx].pago ? 'Baixa registrada!' : 'Baixa desfeita.');
+}
+
+function excluirLancamentoFin() {
+  if (!confirm('Excluir este lançamento?')) return;
+  finLancamentos = finLancamentos.filter(x=>x.id!==finDetalheId);
+  saveFinanceiro();
+  closeModal('modal-fin-detalhe');
+  renderFinanceiro();
+  toast('Lançamento excluído.');
+}
+
+
 
 </script>
 </body>
